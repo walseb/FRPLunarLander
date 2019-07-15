@@ -22,6 +22,17 @@
   (major1) == 4 && (major2) == 12 && (minor) <= 0)
 #endif /* MIN_VERSION_base */
 
+/* package lens-4.17 */
+#ifndef VERSION_lens
+#define VERSION_lens "4.17"
+#endif /* VERSION_lens */
+#ifndef MIN_VERSION_lens
+#define MIN_VERSION_lens(major1,major2,minor) (\
+  (major1) <  4 || \
+  (major1) == 4 && (major2) <  17 || \
+  (major1) == 4 && (major2) == 17 && (minor) <= 0)
+#endif /* MIN_VERSION_lens */
+
 /* package linear-1.20.8 */
 #ifndef VERSION_linear
 #define VERSION_linear "1.20.8"
@@ -120,17 +131,6 @@
   (major1) == 2 && (major2) <  22 || \
   (major1) == 2 && (major2) == 22 && (minor) <= 0)
 #endif /* MIN_TOOL_VERSION_haddock */
-
-/* tool happy-1.19.11 */
-#ifndef TOOL_VERSION_happy
-#define TOOL_VERSION_happy "1.19.11"
-#endif /* TOOL_VERSION_happy */
-#ifndef MIN_TOOL_VERSION_happy
-#define MIN_TOOL_VERSION_happy(major1,major2,minor) (\
-  (major1) <  1 || \
-  (major1) == 1 && (major2) <  19 || \
-  (major1) == 1 && (major2) == 19 && (minor) <= 11)
-#endif /* MIN_TOOL_VERSION_happy */
 
 /* tool hpc-0.67 */
 #ifndef TOOL_VERSION_hpc
