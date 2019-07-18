@@ -44,6 +44,17 @@
   (major1) == 1 && (major2) == 20 && (minor) <= 8)
 #endif /* MIN_VERSION_linear */
 
+/* package monad-loops-0.4.3 */
+#ifndef VERSION_monad_loops
+#define VERSION_monad_loops "0.4.3"
+#endif /* VERSION_monad_loops */
+#ifndef MIN_VERSION_monad_loops
+#define MIN_VERSION_monad_loops(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  4 || \
+  (major1) == 0 && (major2) == 4 && (minor) <= 3)
+#endif /* MIN_VERSION_monad_loops */
+
 /* package reactive-banana-1.2.1.0 */
 #ifndef VERSION_reactive_banana
 #define VERSION_reactive_banana "1.2.1.0"
@@ -131,6 +142,17 @@
   (major1) == 2 && (major2) <  22 || \
   (major1) == 2 && (major2) == 22 && (minor) <= 0)
 #endif /* MIN_TOOL_VERSION_haddock */
+
+/* tool happy-1.19.11 */
+#ifndef TOOL_VERSION_happy
+#define TOOL_VERSION_happy "1.19.11"
+#endif /* TOOL_VERSION_happy */
+#ifndef MIN_TOOL_VERSION_happy
+#define MIN_TOOL_VERSION_happy(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  19 || \
+  (major1) == 1 && (major2) == 19 && (minor) <= 11)
+#endif /* MIN_TOOL_VERSION_happy */
 
 /* tool hpc-0.67 */
 #ifndef TOOL_VERSION_hpc

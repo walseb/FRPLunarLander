@@ -27,44 +27,46 @@ type Position = (Int, Int)
 -- We have playerdata that only stores a position
 data PlayerData = PlayerData { _pos :: Position }
 
--- We have a class interface of player
-class Player p where
-  playerPosition :: p -> Position
-  playerMoveTo :: Position -> p -> p
+data GameState = GameState PlayerData
 
--- We ensure that PlayerData can use the functions defined by player
-instance Player PlayerData where
-  playerPosition = _pos
-  playerMoveTo pos player = player { _pos = pos }
-
--- We have a game state class interface
--- class GameState g where
---   getPlayer :: Player p => g -> p
---   getMonsterPositions :: g -> [Position]
-
-class Player (PlayerType s) => GameState s where
-  type PlayerType s :: *
-  getPlayer :: s -> PlayerType s
-  getMonsterPositions :: s -> [Position]
-
--- The game state data structure consists of the data of a player (notice, not the player class interface, it's not a class mate, it means that that datastructure can use that function interface, so you can't pass it here) and a bunch of positions for enemies
-data GameStateData = GameStateData PlayerData [Position]
-
--- Ensure that GameStateData can use the functions defined in the GameState class
+-- -- We have a class interface of player
+-- class Player p where
+--   playerPosition :: p -> Position
+--   playerMoveTo :: Position -> p -> p
+--
+-- -- We ensure that PlayerData can use the functions defined by player
+-- instance Player PlayerData where
+--   playerPosition = _pos
+--   playerMoveTo pos player = player { _pos = pos }
+--
+-- -- We have a game state class interface
+-- -- class GameState g where
+-- --   getPlayer :: Player p => g -> p
+-- --   getMonsterPositions :: g -> [Position]
+--
+-- class Player (PlayerType s) => GameState s where
+--   type PlayerType s :: *
+--   getPlayer :: s -> PlayerType s
+--   getMonsterPositions :: s -> [Position]
+--
+-- -- The game state data structure consists of the data of a player (notice, not the player class interface, it's not a class mate, it means that that datastructure can use that function interface, so you can't pass it here) and a bunch of positions for enemies
+-- data GameStateData = GameStateData PlayerData [Position]
+--
+-- -- Ensure that GameStateData can use the functions defined in the GameState class
+-- -- instance GameState GameStateData where
+-- --   getPlayer           (GameStateData p _) = p
+-- --   getMonsterPositions (GameStateData _ mPoses) = mPoses
+--
 -- instance GameState GameStateData where
---   getPlayer           (GameStateData p _) = p
+--   type PlayerType GameStateData = PlayerData
+--   getPlayer (GameStateData p _) = p
 --   getMonsterPositions (GameStateData _ mPoses) = mPoses
-
-instance GameState GameStateData where
-  type PlayerType GameStateData = PlayerData
-  getPlayer (GameStateData p _) = p
-  getMonsterPositions (GameStateData _ mPoses) = mPoses
-
-checkForCollisions :: GameState s => s -> [Position] -> Bool
-checkForCollisions s ps =
-  let p    = getPlayer s
-      pPos = playerPosition p
-  in  pPos `elem` ps
+--
+-- checkForCollisions :: GameState s => s -> [Position] -> Bool
+-- checkForCollisions s ps =
+--   let p    = getPlayer s
+--       pPos = playerPosition p
+--   in  pPos `elem` ps
 
 -- Main
 main :: IO ()
@@ -72,10 +74,10 @@ main = do
   initializeAll
   window   <- createWindow "My SDL Application" defaultWindow
   renderer <- createRenderer window (-1) defaultRenderer
-  appLoop renderer
+  appLoop renderer (GameState (PlayerData { _pos = (10, 10) }))
 
-appLoop :: Renderer -> IO ()
-appLoop renderer = do
+appLoop :: Renderer -> GameState -> IO ()
+appLoop renderer state = do
   events <- pollEvents
 
   -- Rendering
@@ -91,8 +93,7 @@ appLoop renderer = do
   present renderer
 
   -- Exit
-  unless (any (isKeyDown KeycodeQ) events) (appLoop renderer)
-
+  unless (any (isKeyDown KeycodeQ) events) (appLoop renderer state)
 
 isKeyDown :: Keycode -> Event -> Bool
 isKeyDown keycode event = case eventPayload event of
