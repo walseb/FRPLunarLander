@@ -5,18 +5,18 @@ let
   inherit (nixpkgs) pkgs;
 
   f = { mkDerivation, base, linear, reactive-banana, sdl2
-      , sdl2-image, sdl2-sprite, stdenv, lens, monad-loops
+      , sdl2-image, sdl2-sprite, stdenv, lens, monad-loops, cabal-install,
       }:
-      mkDerivation {
-        pname = "Project9";
-        version = "0.1.0.0";
-        src = ./.;
-        isLibrary = false;
-        isExecutable = true;
-        executableHaskellDepends = [
-          base linear reactive-banana sdl2 sdl2-image sdl2-sprite lens monad-loops
-        ];
-        license = stdenv.lib.licenses.bsd3;
+        mkDerivation {
+          pname = "Project9";
+          version = "0.1.0.0";
+          src = ./.;
+          isLibrary = false;
+          isExecutable = true;
+          executableHaskellDepends = [
+            base linear reactive-banana sdl2 sdl2-image sdl2-sprite lens monad-loops cabal-install
+          ];
+          license = stdenv.lib.licenses.bsd3;
       };
 
   haskellPackages = if compiler == "default"

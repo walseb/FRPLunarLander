@@ -1,34 +1,49 @@
-{-# LANGUAGE OverloadedStrings #-}
+-- * Imports
+-- {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
 import qualified SDL.Sprite
-import           Control.Monad.Loops
+-- Needed for monad loop
+-- import           Control.Monad.Loops
 import           SDL
-import           Linear
+import           Linear                         ( V2 )
 import           Control.Monad                  ( unless )
 import           Control.Lens
+import           Foreign.C.Types                ( CInt )
+import           Control.Concurrent             ( threadDelay )
+import           Data.String                    ( fromString )
+import           Data.Coerce                    ( coerce )
 
--- test
--- Also fix the gnus timer man
-
--- TODO
+-- * Todo
 -- Use monad.loops
 -- https://stackoverflow.com/questions/19285691/how-do-i-write-a-game-loop-in-haskell
-
 -- http://amixtureofmusings.com/2016/05/19/associated-types-and-haskell/
--- And learn more about data vs class vs instance
 
--- We have a position
-type Position = (Int, Int)
+-- * Types
+-- ** State
+-- *** Player
+newtype Player = Player { _location :: V2 CInt }
 
--- We have playerdata that only stores a position
-data PlayerData = PlayerData { _pos :: Position }
+makeLenses ''Player
 
-data GameState = GameState PlayerData
+-- *** Keys
+newtype MovementVector = MovementVector (V2 CInt)
+newtype KeyState = KeyState { _movement :: MovementVector }
 
+makeLenses ''KeyState
+
+
+-- *** GameState
+data GameState = GameState { _keyState :: KeyState,
+                             _player :: Player}
+
+makeLenses ''GameState
+
+-- * Commented out stuff
 -- -- We have a class interface of player
 -- class Player p where
 --   playerPosition :: p -> Position
@@ -68,33 +83,49 @@ data GameState = GameState PlayerData
 --       pPos = playerPosition p
 --   in  pPos `elem` ps
 
--- Main
+-- * Main
 main :: IO ()
 main = do
   initializeAll
-  window   <- createWindow "My SDL Application" defaultWindow
-  renderer <- createRenderer window (-1) defaultRenderer
-  appLoop renderer (GameState (PlayerData { _pos = (10, 10) }))
+  window     <- createWindow (fromString "My SDL Application") defaultWindow
 
-appLoop :: Renderer -> GameState -> IO ()
-appLoop renderer state = do
+  renderer   <- createRenderer window (-1) defaultRenderer
+
+  spritetest <- SDL.Sprite.load renderer "testSprite.png" (V2 10 10)
+  appLoop renderer
+          spritetest
+          (GameState (KeyState (MovementVector (V2 0 0))) (Player (V2 0 0)))
+
+-- * Loop
+appLoop :: Renderer -> SDL.Sprite.Sprite -> GameState -> IO ()
+appLoop renderer sprite state = do
   events <- pollEvents
 
   -- Rendering
   rendererDrawColor renderer $= V4 0 0 255 255
 
-  -- https://github.com/chrisdone/sdl2-sprite/blob/master/app/Main.hs
-  sprite <- SDL.Sprite.load renderer "testSprite.png" (V2 10 10)
+  let moveDir = getKeyVector
+        events
+        (KeycodeUp, KeycodeDown, KeycodeLeft, KeycodeRight)
 
+  let newState = (player . location) `over` (+ coerce moveDir) $ state
+
+  -- https://github.com/chrisdone/sdl2-sprite/blob/master/app/Main.hs
   clear renderer
 
-  SDL.Sprite.render sprite (V2 10 10)
+  SDL.Sprite.render sprite ((player . location) `view` newState)
 
   present renderer
 
-  -- Exit
-  unless (any (isKeyDown KeycodeQ) events) (appLoop renderer state)
+  -- 16 ms frametime = 60 fps
+  let ms = 16 :: Float
+  threadDelay (round (1000 * ms))
 
+  -- Exit
+  unless (any (isKeyDown KeycodeQ) events) (appLoop renderer sprite newState)
+
+
+-- * Key detection
 isKeyDown :: Keycode -> Event -> Bool
 isKeyDown keycode event = case eventPayload event of
     -- If it's a keyboard event, check it further
@@ -104,3 +135,20 @@ isKeyDown keycode event = case eventPayload event of
       && keyboardEventKeyMotion keyboardEvent
       == Pressed
   _ -> False
+
+-- ** 2 Keys to vector
+vectorizeKeys :: [Event] -> (Keycode, Keycode) -> CInt
+vectorizeKeys events (key1, key2) | any (isKeyDown key1) events = 1
+                                  | any (isKeyDown key2) events = -1
+                                  | otherwise                   = 0
+
+-- *** 4 Keys to vector
+getKeyVector
+  :: [Event] -> (Keycode, Keycode, Keycode, Keycode) -> MovementVector
+getKeyVector events (vKey1, vKey2, hKey1, hKey2) =
+    -- Horizontal
+                                                   coerce
+  (V2 (vectorizeKeys events (hKey2, hKey1))
+    -- Vertical
+      (vectorizeKeys events (vKey2, vKey1))
+  )
