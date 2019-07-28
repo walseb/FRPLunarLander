@@ -5,7 +5,7 @@ let
   inherit (nixpkgs) pkgs;
 
   f = { mkDerivation, base, linear, reactive-banana, sdl2
-      , sdl2-image, sdl2-sprite, stdenv, lens, monad-loops, cabal-install,
+      , sdl2-image, sdl2-sprite, stdenv, lens, monad-loops, cabal-install, monad-extras
       }:
         mkDerivation {
           pname = "Project9";
@@ -14,7 +14,7 @@ let
           isLibrary = false;
           isExecutable = true;
           executableHaskellDepends = [
-            base linear reactive-banana sdl2 sdl2-image sdl2-sprite lens monad-loops cabal-install
+            base linear reactive-banana sdl2 sdl2-image sdl2-sprite lens monad-loops cabal-install monad-extras
           ];
           license = stdenv.lib.licenses.bsd3;
       };

@@ -44,6 +44,17 @@
   (major1) == 1 && (major2) == 20 && (minor) <= 8)
 #endif /* MIN_VERSION_linear */
 
+/* package monad-extras-0.6.0 */
+#ifndef VERSION_monad_extras
+#define VERSION_monad_extras "0.6.0"
+#endif /* VERSION_monad_extras */
+#ifndef MIN_VERSION_monad_extras
+#define MIN_VERSION_monad_extras(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  6 || \
+  (major1) == 0 && (major2) == 6 && (minor) <= 0)
+#endif /* MIN_VERSION_monad_extras */
+
 /* package monad-loops-0.4.3 */
 #ifndef VERSION_monad_loops
 #define VERSION_monad_loops "0.4.3"

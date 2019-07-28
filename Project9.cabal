@@ -22,3 +22,4 @@ executable Project9
                 , sdl2-sprite
                 , lens
                 , monad-loops
+                , monad-extras
