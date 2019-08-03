@@ -12,10 +12,8 @@ import qualified SDL.Sprite
 import           SDL
 import           Linear                         ( V2 )
 import           Control.Monad                  ( unless )
-import           Control.Monad.Extra            ( findM
-                                                , anyM
-                                                )
-import           Debug.Trace                    ( trace )
+import           Control.Monad.Extra            ( anyM )
+-- import           Debug.Trace                    ( trace )
 
 import           Data.Maybe
 import           Control.Lens
@@ -23,7 +21,6 @@ import           Foreign.C.Types                ( CInt )
 import           Control.Concurrent             ( threadDelay )
 import           Data.String                    ( fromString )
 import           Data.Coerce                    ( coerce )
-import           Data.Foldable                  ( find )
 
 -- * Todo
 -- Use monad.loops
@@ -113,7 +110,8 @@ appLoop renderer sprite state = do
   events <- pollEvents
 
   -- Rendering
-  rendererDrawColor renderer $= V4 0 19 48 255
+  -- rendererDrawColor renderer $= V4 0 19 48 255
+  rendererDrawColor renderer $= V4 0 0 100 255
 
   let moveDir = vectorizeKeys events
                               (KeycodeM, KeycodeT, KeycodeS, KeycodeN)
