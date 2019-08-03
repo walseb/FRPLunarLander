@@ -103,7 +103,8 @@ main = do
           spritetest
           (GameState (InputState (MovementVector (V2 0 0))) (Player (V2 0 0)))
 
-  -- We might need to destroy more than just the winodw in the future
+  -- We might need to destroy more than just the window and renderer in the future
+  SDL.destroyRenderer renderer
   SDL.destroyWindow window
 
 -- * Loop
@@ -134,8 +135,8 @@ appLoop renderer sprite state = do
   threadDelay (round (1000 * ms))
 
   -- Exit
-  unless (isKeyPressed events KeycodeQ) (appLoop renderer sprite newState2)
-
+  unless (isKeyPressed events KeycodeEscape)
+    (appLoop renderer sprite newState2)
 
 -- * Key detection
 isKeyPressed :: [Event] -> Keycode -> Bool
