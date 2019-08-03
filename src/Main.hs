@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- * Imports
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -11,7 +12,11 @@ import qualified SDL.Sprite
 import           SDL
 import           Linear                         ( V2 )
 import           Control.Monad                  ( unless )
-import           Control.Monad.Extra
+import           Control.Monad.Extra            ( findM
+                                                , anyM
+                                                )
+import           Debug.Trace                    ( trace )
+
 import           Data.Maybe
 import           Control.Lens
 import           Foreign.C.Types                ( CInt )
@@ -98,24 +103,29 @@ main = do
           spritetest
           (GameState (InputState (MovementVector (V2 0 0))) (Player (V2 0 0)))
 
+  -- We might need to destroy more than just the winodw in the future
+  SDL.destroyWindow window
+
 -- * Loop
 appLoop :: Renderer -> SDL.Sprite.Sprite -> GameState -> IO ()
 appLoop renderer sprite state = do
   events <- pollEvents
 
   -- Rendering
-  rendererDrawColor renderer $= V4 0 0 255 255
+  rendererDrawColor renderer $= V4 0 19 48 255
 
-  let moveDir = getKeyVector
-        events
-        (KeycodeUp, KeycodeDown, KeycodeLeft, KeycodeRight)
+  let moveDir = vectorizeKeys events
+                              (KeycodeM, KeycodeT, KeycodeS, KeycodeN)
+                              ((inputState . movement) `view` state)
 
-  let newState = (player . location) `over` (+ coerce moveDir) $ state
+  let newState1 = (player . location) `over` (+ coerce moveDir) $ state
+
+  let newState2 = (inputState . movement) `set` moveDir $ newState1
 
   -- https://github.com/chrisdone/sdl2-sprite/blob/master/app/Main.hs
   clear renderer
 
-  SDL.Sprite.render sprite ((player . location) `view` newState)
+  SDL.Sprite.render sprite ((player . location) `view` newState2)
 
   present renderer
 
@@ -124,19 +134,16 @@ appLoop renderer sprite state = do
   threadDelay (round (1000 * ms))
 
   -- Exit
-  unless (any (isEventKeyDown KeycodeQ) events)
-         (appLoop renderer sprite newState)
+  unless (isKeyPressed events KeycodeQ) (appLoop renderer sprite newState2)
 
 
 -- * Key detection
--- Really a key can be in 3 states, up down or not pressed this frame
--- If a key is not pressed this frame, return none
--- Else either return True for key is down, or False for key is up
-newtype KeyIsDown = KeyIsDown Bool
+isKeyPressed :: [Event] -> Keycode -> Bool
+isKeyPressed events key =
+  any (isJust . fmap isKeyboardEventPressed . eventContainsKey key) events
 
--- Returns key if key is part of event
-eventIsKey :: Keycode -> Event -> Maybe KeyboardEventData
-eventIsKey keycode event = case eventPayload event of
+eventContainsKey :: Keycode -> Event -> Maybe KeyboardEventData
+eventContainsKey keycode event = case eventPayload event of
   KeyboardEvent keyboardEvent ->
     case keysymKeycode (keyboardEventKeysym keyboardEvent) == keycode of
       True  -> Just keyboardEvent
@@ -145,58 +152,36 @@ eventIsKey keycode event = case eventPayload event of
 
 -- Returns "Just True" if key is down and "Just False" if key is up. Otherwise "Nothing"
 -- If it's not pressed it has to be released
-isKeyDown :: KeyboardEventData -> KeyIsDown
-isKeyDown key = coerce $ keyboardEventKeyMotion key == Pressed
-
-isKeyPressed :: Keycode -> [Event] -> Maybe KeyIsDown
-isKeyPressed key events = findM
-  -- If key exists among the events
-  (\event -> case (eventIsKey key event) of
-    -- Is key that we now know exists
-    Just x  -> Just isKeyDown x
-    -- Key wasn't pressed
-    Nothing -> Nothing
-  )
-  events
+isKeyboardEventPressed :: KeyboardEventData -> Bool
+isKeyboardEventPressed key = keyboardEventKeyMotion key == Pressed
 
 -- ** 2 Keys to vector
--- vectorizeKeys events (key1, key2) | any (isEventKey key1) events = 1
---                                   | any (isEventKey key2) events = -1
---                                   | otherwise                    = 0
-keyToVector :: Event -> Keycode -> Maybe CInt
-keyToVector event key = case eventIsKey key event of
-  Nothing -> Nothing
-  Just x ->
-    (case coerce isKeyDown x of
-      True  -> Just 1
-      False -> Just (-1)
-    )
+keyToVector :: [Event] -> Keycode -> Maybe CInt
+keyToVector events key =
+  case anyM (fmap isKeyboardEventPressed . eventContainsKey key) events of
+    Just True  -> Just 1
+    Just False -> Just 0
+    _          -> Nothing
 
--- vectorizeKeys :: [Event] -> (Keycode, Keycode) -> Maybe CInt
--- vectorizeKeys events keys =
---   find (\key -> find (\event -> isJust keyToVector event key) events) keys
-
-vectorizeKeys :: [Event] -> (Keycode, Keycode) -> Maybe CInt
-vectorizeKeys events (key1, key2) = find
-  (\event -> case keyToVector event key1 of
-    Just x  -> x
-    Nothing -> case keyToVector event key2 of
-      Just x  -> x
-      Nothing -> Nothing
-  )
-  events
+keysToNumber :: [Event] -> (Keycode, Keycode) -> Maybe CInt
+keysToNumber events (key1, key2) = case keyToVector events key1 of
+  Just a  -> Just a
+  Nothing -> case keyToVector events key2 of
+    Just a  -> Just (-a)
+    Nothing -> Nothing
 
 -- *** 4 Keys to vector
-getKeyVector
-  :: [Event] -> (Keycode, Keycode, Keycode, Keycode) -> MovementVector
-getKeyVector events (vKey1, vKey2, hKey1, hKey2) =
-    -- Horizontal
-                                                   coerce
-  (V2 (vectorizeKeys events (hKey2, hKey1))
-    -- Vertical
-      (vectorizeKeys events (vKey2, vKey1))
-  )
+vectorizeKeys
+  :: [Event]
+  -> (Keycode, Keycode, Keycode, Keycode)
+  -> MovementVector
+  -> MovementVector
+vectorizeKeys [] _ vect = vect
 
--- ** Detect key hold
-updateKeystate :: [Event] -> InputState -> InputState
-updateKeystate = _
+vectorizeKeys events (vKey1, vKey2, hKey1, hKey2) (MovementVector (V2 a b)) =
+    -- Horizontal
+  coerce
+    (V2 (fromMaybe a (keysToNumber events (hKey2, hKey1)))
+    -- Vertical
+        (fromMaybe b (keysToNumber events (vKey2, vKey1)))
+    )

@@ -1,0 +1,14 @@
+/*
+/*/
+
+!CHANGELOG.md
+!Docs
+!.envrc-old
+!/.git/
+!.gitignore
+!LICENSE
+!Project9.cabal
+!Setup.hs
+!shell.nix
+!/src/
+!testSprite.png
