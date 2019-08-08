@@ -13,7 +13,7 @@ import           SDL
 import           Linear                         ( V2 )
 import           Control.Monad                  ( unless )
 import           Control.Monad.Extra            ( anyM )
--- import           Debug.Trace                    ( trace )
+import qualified Debug.Trace                   as D
 
 import           Data.Maybe
 import           Control.Lens
@@ -103,6 +103,8 @@ main = do
   -- We might need to destroy more than just the window and renderer in the future
   SDL.destroyRenderer renderer
   SDL.destroyWindow window
+  -- Crashes GHCI often, but should be used in release
+  -- SDL.quit
 
 -- * Loop
 appLoop :: Renderer -> SDL.Sprite.Sprite -> GameState -> IO ()
@@ -133,9 +135,10 @@ appLoop renderer sprite state = do
   threadDelay (round (1000 * ms))
 
   -- Exit
-  unless (isKeyPressed events KeycodeEscape)
-    (appLoop renderer sprite newState2)
+  unless (isKeyPressed events KeycodeEscape) (appLoop renderer sprite newState2)
+-- * New way
 
+-- * Old way
 -- * Key detection
 isKeyPressed :: [Event] -> Keycode -> Bool
 isKeyPressed events key =
@@ -152,14 +155,15 @@ eventContainsKey keycode event = case eventPayload event of
 -- Returns "Just True" if key is down and "Just False" if key is up. Otherwise "Nothing"
 -- If it's not pressed it has to be released
 isKeyboardEventPressed :: KeyboardEventData -> Bool
-isKeyboardEventPressed key = keyboardEventKeyMotion key == Pressed
+isKeyboardEventPressed key = -- D.trace (show key)
+  (keyboardEventKeyMotion key == Pressed)
 
 -- ** 2 Keys to vector
 keyToVector :: [Event] -> Keycode -> Maybe CInt
 keyToVector events key =
   case anyM (fmap isKeyboardEventPressed . eventContainsKey key) events of
-    Just True  -> Just 1
-    Just False -> Just 0
+    Just True  -> D.trace ("press!!!!!!" ++ (show events)) $ Just 1
+    Just False -> D.trace ("release!!!!!!" ++ (show events)) $ Just 0
     _          -> Nothing
 
 keysToNumber :: [Event] -> (Keycode, Keycode) -> Maybe CInt
@@ -184,3 +188,88 @@ vectorizeKeys events (vKey1, vKey2, hKey1, hKey2) (MovementVector (V2 a b)) =
     -- Vertical
         (fromMaybe b (keysToNumber events (vKey2, vKey1)))
     )
+
+-- * New
+data KeyState = KeyState Keycode Bool
+
+data InputStateNEW = InputStateNEW {
+  up :: KeyState
+  , down :: KeyState
+  , left :: KeyState
+  , right :: KeyState
+            }
+
+makeLenses ''InputStateNEW
+
+myKeys = InputStateNEW { up    = (KeyState KeycodeM False)
+                    , down  = (KeyState KeycodeT False)
+                    , left  = (KeyState KeycodeS False)
+                    , right = (KeyState KeycodeN False)
+                    }
+
+data InputEffect =
+  Quit
+  | MoveHorizontal CInt
+  | MoveVertical CInt
+
+-- ** Event -> InputState -> InputState
+inputStateUpdate :: [Event] -> InputStateNEW -> InputStateNEW
+inputStateUpdate events state = undefined  -- fmap (\a -> a) $ fmap (inputStateUpdateSingle state) events
+
+inputStateUpdateSingle :: InputStateNEW -> Event -> InputStateNEW
+inputStateUpdateSingle event state =
+  case (translateEvent event) of
+    Just e -> eventDataToKeystate e
+    Nothing -> state
+
+-- This will take the input and
+eventDataToKeystate :: KeyboardEventData -> Maybe KeyState
+eventDataToKeystate (KeyboardEventData _ pressedState _ keysym) = Just (KeyState (SDL.keysymKeycode keysym) (pressedState == SDL.Pressed))
+eventDataToKeystate _ = Nothing
+
+extractKeystate :: InputStateNEW -> KeyState -> InputStateNEW
+extractKeystate (KeyState key _) inputState =
+  getKey (up `view` inputState)
+
+-- ** InputState -> [Effect]
+
+-- ** [Effect] -> World -> World
+  -- Use fold here!!!!
+-- Endo something..??? Check that out, it's a screenshot on ur desktop
+-- applyEffect :: InputEffect -> GameState -> GameState
+-- applyEffect effect state = case effect of
+
+-- * Garbage
+getKey :: KeyState -> Keycode
+getKey (KeyState key _) = key
+
+translateEvent :: Event -> Maybe KeyState
+translateEvent = (translateEventPayload . eventPayload)
+
+translateEventPayload :: EventPayload -> Maybe KeyState
+translateEventPayload (SDL.KeyboardEvent (KeyboardEventData _ isPressed _ keysym)) =
+  (KeyState (SDL.keysymKeycode keysym) isPressed)
+translateEventPayload _ = Nothing
+
+-- eventToInputEffect :: EventPayload -> Maybe InputEffect
+-- eventToInputEffect SDL.QuitEvent         = Just Quit
+-- eventToInputEffect (SDL.KeyboardEvent e) = keyToInputEffect e
+-- eventToInputEffect _                     = Nothing
+
+-- applyEffect :: InputEffect -> GameState -> GameState
+-- applyEffect effect state = case effect of
+--   Quit             -> undefined
+--   MoveVertical   a -> undefined
+--   MoveHorizontal a -> undefined
+
+
+--applyEffects :: [InputEffect] -> GameState -> GameState
+--applyEffects effects state =
+
+
+-- This is how you get keys from data
+-- updateInputState (KeyboardEventData _ SDL.Pressed _ keysym) =
+--   case SDL.keysymKeycode keysym of
+--     SDL.KeycodeEscape -> Just Quit
+--     _                 -> Nothing
+-- updateInputState _ = Nothing
