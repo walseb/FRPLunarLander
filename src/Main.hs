@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE EmptyCase #-}
 -- * Imports
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -11,8 +12,12 @@ import qualified SDL.Sprite
 -- import           Control.Monad.Loops
 import           SDL
 import           Linear                         ( V2 )
-import           Control.Monad                  ( unless )
-import           Control.Monad.Extra            ( anyM )
+import           Control.Monad                  ( unless
+                                                , (>=>)
+                                                )
+import           Control.Monad.Extra            ( anyM
+                                                , findM
+                                                )
 import qualified Debug.Trace                   as D
 
 import           Data.Maybe
@@ -88,22 +93,26 @@ makeLenses ''GameState
 --   in  pPos `elem` ps
 
 -- * Main
-main :: IO ()
-main = do
-  initializeAll
-  window     <- createWindow (fromString "My SDL Application") defaultWindow
+-- mainOLD :: IO ()
+-- mainOLD = do
+  -- initializeAll
+  -- window     <- createWindow (fromString "My SDL Application") defaultWindow
 
-  renderer   <- createRenderer window (-1) defaultRenderer
+  -- renderer   <- createRenderer window (-1) defaultRenderer
 
-  spritetest <- SDL.Sprite.load renderer "testSprite.png" (V2 10 10)
-  appLoop renderer
-          spritetest
-          (GameState (InputState (MovementVector (V2 0 0))) (Player (V2 0 0)))
+  -- spritetest <- SDL.Sprite.load renderer "testSprite.png" (V2 10 10)
+  -- appLoopNEW renderer
+  --         spritetest
+  --         (InputStateNEW (KeyState KeycodeA True)
+  --                          (KeyState KeycodeB False)
+  --                          (KeyState KeycodeC False)
+  --                          (KeyState KeycodeD False))
+  --         (GameState (InputState (MovementVector (V2 0 0))) (Player (V2 0 0)))
 
-  -- We might need to destroy more than just the window and renderer in the future
-  SDL.destroyRenderer renderer
-  SDL.destroyWindow window
-  -- Crashes GHCI often, but should be used in release
+  -- -- We might need to destroy more than just the window and renderer in the future
+  -- SDL.destroyRenderer renderer
+  -- SDL.destroyWindow window
+  -- -- Crashes GHCI often, but should be used in release
   -- SDL.quit
 
 -- * Loop
@@ -162,9 +171,11 @@ isKeyboardEventPressed key = -- D.trace (show key)
 keyToVector :: [Event] -> Keycode -> Maybe CInt
 keyToVector events key =
   case anyM (fmap isKeyboardEventPressed . eventContainsKey key) events of
-    Just True  -> D.trace ("press!!!!!!" ++ (show events)) $ Just 1
-    Just False -> D.trace ("release!!!!!!" ++ (show events)) $ Just 0
-    _          -> Nothing
+    Just True -> -- D.trace ("press!!!!!!" ++ (show events)) $
+      Just 1
+    Just False -> -- D.trace ("release!!!!!!" ++ (show events)) $
+      Just 0
+    _ -> Nothing
 
 keysToNumber :: [Event] -> (Keycode, Keycode) -> Maybe CInt
 keysToNumber events (key1, key2) = case keyToVector events key1 of
@@ -190,86 +201,205 @@ vectorizeKeys events (vKey1, vKey2, hKey1, hKey2) (MovementVector (V2 a b)) =
     )
 
 -- * New
+-- ** Data
 data KeyState = KeyState Keycode Bool
+  deriving Show
 
 data InputStateNEW = InputStateNEW {
-  up :: KeyState
-  , down :: KeyState
-  , left :: KeyState
-  , right :: KeyState
+  _up :: KeyState
+  , _down :: KeyState
+  , _left :: KeyState
+  , _right :: KeyState
             }
+  deriving Show
 
 makeLenses ''InputStateNEW
 
-myKeys = InputStateNEW { up    = (KeyState KeycodeM False)
-                    , down  = (KeyState KeycodeT False)
-                    , left  = (KeyState KeycodeS False)
-                    , right = (KeyState KeycodeN False)
-                    }
+myKeys = InputStateNEW { _up    = KeyState KeycodeM False
+                       , _down  = KeyState KeycodeT False
+                       , _left  = KeyState KeycodeS False
+                       , _right = KeyState KeycodeN False
+                       }
+
+-- data InputEffect =
+--   InputEffect
+--   {
+--   exit :: Bool
+--   , move :: InputStateNEW -> MovementVector -> MovementVector
+--   }
 
 data InputEffect =
-  Quit
-  | MoveHorizontal CInt
-  | MoveVertical CInt
+  Exit Bool
+  | Move (InputStateNEW -> GameState -> GameState)
 
--- ** Event -> InputState -> InputState
+-- ** Input effect
+-- *** define input effect
+boolToNumber :: Bool -> Maybe CInt
+boolToNumber True  = Just 1
+boolToNumber False = Nothing
+
+vectorizeMovementGood :: InputStateNEW -> GameState -> GameState
+vectorizeMovementGood inputState state = (player . location) `over` ((+) (coerce (vectorizeMovement inputState))) $ state
+
+vectorizeMovement :: InputStateNEW -> MovementVector
+vectorizeMovement (InputStateNEW (KeyState keycode1 isPressed1) (KeyState keycode2 isPressed2) (KeyState keycode3 isPressed3) (KeyState keycode4 isPressed4))
+  =
+    -- Horizontal
+    coerce
+    (V2
+      (case (boolToNumber isPressed1) of
+        Just a  -> a
+        Nothing -> case (boolToNumber isPressed2) of
+          Just b  -> (-b)
+          Nothing -> 0
+      )
+      (case (boolToNumber isPressed3) of
+        Just c  -> c
+        Nothing -> case (boolToNumber isPressed4) of
+          Just d  -> (-d)
+          Nothing -> 0
+      )
+    )
+
+-- *** Use input effect
+-- myInputEffect = InputEffect { exit = False, move = vectorizeMovement }
+
+-- ** Apply input effects
+-- ** [Event] -> InputStateNEW -> InputStateNEW
+test =
+  (inputStateUpdateTEST
+    (InputStateNEW (KeyState KeycodeA True)
+                   (KeyState KeycodeB False)
+                   (KeyState KeycodeC False)
+                   (KeyState KeycodeD False)
+    )
+    (KeyState KeycodeD True)
+  )
+
+test2 =
+  (inputStateUpdateTEST
+    (InputStateNEW (KeyState KeycodeA True)
+                   (KeyState KeycodeB False)
+                   (KeyState KeycodeC False)
+                   (KeyState KeycodeD False)
+    )
+    (KeyState KeycodeS True)
+  )
+
+
 inputStateUpdate :: [Event] -> InputStateNEW -> InputStateNEW
-inputStateUpdate events state = undefined  -- fmap (\a -> a) $ fmap (inputStateUpdateSingle state) events
+inputStateUpdate events state =
+  -- D.trace (show (foldr inputStateUpdateSINGLE state events)) $
+  foldr inputStateUpdateSINGLE state events
 
-inputStateUpdateSingle :: InputStateNEW -> Event -> InputStateNEW
-inputStateUpdateSingle event state =
-  case (translateEvent event) of
-    Just e -> eventDataToKeystate e
+inputStateUpdateSINGLE :: Event -> InputStateNEW -> InputStateNEW
+inputStateUpdateSINGLE event state =
+  case (>=>) eventToKeyState (pure . inputStateUpdateTEST state) event of
+    Just a  -> a
     Nothing -> state
 
--- This will take the input and
-eventDataToKeystate :: KeyboardEventData -> Maybe KeyState
-eventDataToKeystate (KeyboardEventData _ pressedState _ keysym) = Just (KeyState (SDL.keysymKeycode keysym) (pressedState == SDL.Pressed))
-eventDataToKeystate _ = Nothing
+inputStateUpdateTEST :: InputStateNEW -> KeyState -> InputStateNEW
+inputStateUpdateTEST a@(InputStateNEW (KeyState keycode1 isPressed1) (KeyState keycode2 isPressed2) (KeyState keycode3 isPressed3) (KeyState keycode4 isPressed4)) (KeyState newKeyCode newIsPressed)
+  = case (newKeyCode == keycode1) of
+    True ->
+      (InputStateNEW (KeyState keycode1 newIsPressed)
+                     (KeyState keycode2 isPressed2)
+                     (KeyState keycode3 isPressed3)
+                     (KeyState keycode4 isPressed4)
+      )
+    False -> case (newKeyCode == keycode2) of
+      True ->
+        (InputStateNEW (KeyState keycode1 isPressed1)
+                       (KeyState keycode2 newIsPressed)
+                       (KeyState keycode3 isPressed3)
+                       (KeyState keycode4 isPressed4)
+        )
+      False -> case (newKeyCode == keycode3) of
+        True ->
+          (InputStateNEW (KeyState keycode1 isPressed1)
+                         (KeyState keycode2 isPressed2)
+                         (KeyState keycode3 newIsPressed)
+                         (KeyState keycode4 isPressed4)
+          )
+        False -> case (newKeyCode == keycode4) of
+          True ->
+            (InputStateNEW (KeyState keycode1 isPressed1)
+                           (KeyState keycode2 isPressed2)
+                           (KeyState keycode3 isPressed3)
+                           (KeyState keycode4 newIsPressed)
+            )
+          False ->
+            a
 
-extractKeystate :: InputStateNEW -> KeyState -> InputStateNEW
-extractKeystate (KeyState key _) inputState =
-  getKey (up `view` inputState)
+inputStateUpdateTEST state _ =
+  -- (InputStateNEW (KeyState KeycodeA False)
+  --                (KeyState KeycodeA False)
+  --                (KeyState KeycodeA False)
+  --                (KeyState KeycodeA False)
+  -- )
+  state
 
--- ** InputState -> [Effect]
 
--- ** [Effect] -> World -> World
-  -- Use fold here!!!!
--- Endo something..??? Check that out, it's a screenshot on ur desktop
--- applyEffect :: InputEffect -> GameState -> GameState
--- applyEffect effect state = case effect of
-
--- * Garbage
-getKey :: KeyState -> Keycode
-getKey (KeyState key _) = key
-
-translateEvent :: Event -> Maybe KeyState
-translateEvent = (translateEventPayload . eventPayload)
+-- *** Event -> Keystate
+eventToKeyState :: Event -> Maybe KeyState
+eventToKeyState = translateEventPayload . eventPayload
 
 translateEventPayload :: EventPayload -> Maybe KeyState
-translateEventPayload (SDL.KeyboardEvent (KeyboardEventData _ isPressed _ keysym)) =
-  (KeyState (SDL.keysymKeycode keysym) isPressed)
+translateEventPayload (SDL.KeyboardEvent (KeyboardEventData _ Pressed _ keysym))
+  = Just (KeyState (SDL.keysymKeycode keysym) True)
+translateEventPayload (SDL.KeyboardEvent (KeyboardEventData _ Released _ keysym))
+  = Just (KeyState (SDL.keysymKeycode keysym) False)
 translateEventPayload _ = Nothing
 
--- eventToInputEffect :: EventPayload -> Maybe InputEffect
--- eventToInputEffect SDL.QuitEvent         = Just Quit
--- eventToInputEffect (SDL.KeyboardEvent e) = keyToInputEffect e
--- eventToInputEffect _                     = Nothing
+-- ** GameState -> InputEffect -> GameState
+evalEffect :: InputEffect -> GameState -> GameState
+evalEffect = undefined
 
--- applyEffect :: InputEffect -> GameState -> GameState
--- applyEffect effect state = case effect of
---   Quit             -> undefined
---   MoveVertical   a -> undefined
---   MoveHorizontal a -> undefined
+appLoopNEW :: Renderer -> SDL.Sprite.Sprite -> InputStateNEW -> GameState -> IO ()
+appLoopNEW renderer sprite inputStateNEWTest state = do
+  events <- pollEvents
+
+  -- Rendering
+  -- rendererDrawColor renderer $= V4 0 19 48 255
+  rendererDrawColor renderer $= V4 0 0 100 255
+
+  let inputStateUpdatedNEW = inputStateUpdate events inputStateNEWTest
+
+  let newState2 = vectorizeMovementGood inputStateUpdatedNEW state
+
+  -- https://github.com/chrisdone/sdl2-sprite/blob/master/app/Main.hs
+  clear renderer
+
+  SDL.Sprite.render sprite ((player . location) `view` newState2)
+
+  present renderer
+
+  -- 16 ms frametime = 60 fps
+  let ms = 16 :: Float
+  threadDelay (round (1000 * ms))
+
+  -- Exit
+  unless (isKeyPressed events KeycodeEscape) (appLoopNEW renderer sprite inputStateUpdatedNEW newState2)
 
 
---applyEffects :: [InputEffect] -> GameState -> GameState
---applyEffects effects state =
+main :: IO ()
+main = do
+  initializeAll
+  window     <- createWindow (fromString "My SDL Application") defaultWindow
 
+  renderer   <- createRenderer window (-1) defaultRenderer
 
--- This is how you get keys from data
--- updateInputState (KeyboardEventData _ SDL.Pressed _ keysym) =
---   case SDL.keysymKeycode keysym of
---     SDL.KeycodeEscape -> Just Quit
---     _                 -> Nothing
--- updateInputState _ = Nothing
+  spritetest <- SDL.Sprite.load renderer "testSprite.png" (V2 10 10)
+  appLoopNEW renderer
+          spritetest
+        (InputStateNEW (KeyState KeycodeN False)
+                           (KeyState KeycodeS False)
+                           (KeyState KeycodeT False)
+                           (KeyState KeycodeM False))
+          (GameState (InputState (MovementVector (V2 0 0))) (Player (V2 0 0)))
+
+  -- We might need to destroy more than just the window and renderer in the future
+  SDL.destroyRenderer renderer
+  SDL.destroyWindow window
+  -- Crashes GHCI often, but should be used in release
+  -- SDL.quit
