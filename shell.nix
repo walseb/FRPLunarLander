@@ -1,11 +1,11 @@
 { nixpkgs ? import <nixpkgs> {}, compiler ? "default", doBenchmark ? false }:
 
+# let _pkgs = import <nixpkgs> { }; in
 let
-
   inherit (nixpkgs) pkgs;
+  # reactive-banana-sdl2-bsd = self.callPackage ./reactive-banana-sdl2 {};
 
-  f = { mkDerivation, base, linear, reactive-banana, sdl2
-      , sdl2-image, sdl2-sprite, stdenv, lens, monad-loops, cabal-install, extra
+  f = { mkDerivation, base, linear, reactive-banana, sdl2, sdl2-image, sdl2-sprite, stdenv, lens, monad-loops, cabal-install, extra, reactive-banana-sdl2-bsd
       }:
         mkDerivation {
           pname = "Project9";
@@ -14,7 +14,7 @@ let
           isLibrary = false;
           isExecutable = true;
           executableHaskellDepends = [
-            base linear reactive-banana sdl2 sdl2-image sdl2-sprite lens monad-loops cabal-install extra
+            base linear reactive-banana sdl2 sdl2-image sdl2-sprite lens monad-loops cabal-install extra reactive-banana-sdl2-bsd
           ];
           license = stdenv.lib.licenses.bsd3;
       };
