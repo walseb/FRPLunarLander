@@ -4,12 +4,16 @@
 !CHANGELOG.md
 !Docs
 !.envrc-old
+!.envrc
 !/.git/
 !.gitignore
 !LICENSE
 !Project9.cabal
 !Setup.hs
-!shell.nix
 !/src/
 !testSprite.png
 !guide
+
+!gshell.nix
+!default.nix
+!project.nix
