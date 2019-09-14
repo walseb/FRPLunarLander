@@ -1,3 +1,0 @@
-[submodule "guide/.nixpkgs/reactive-banana-sdl2"]
-	path = guide/.nixpkgs/reactive-banana-sdl2
-	url = https://github.com/walseb/reactive-banana-sdl2
