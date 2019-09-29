@@ -20,14 +20,8 @@ executable ReactiveGame
                 , lens
                 , linear
                 , monad-loops
-                , mtl
-                , reflex
-                , reflex-sdl2 >= 0.3.0.0
-                , sdl2 >=2.3
+                , sdl2
                 , sdl2-image
                 , sdl2-sprite
-
-                -- These are used by MyHost
-                , async
-                , dependent-sum
-                , ref-tf >= 0.4.0.1
+                , dunai
+                , bearriver
