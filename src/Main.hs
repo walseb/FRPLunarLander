@@ -65,24 +65,33 @@ isKeyboardEventPressed :: KeyboardEventData -> Bool
 isKeyboardEventPressed key = -- D.trace (show key)
   (keyboardEventKeyMotion key == Pressed)
 
-data KeyState = KeyState Keycode Bool
+data KeyState = KeyState {
+    _key     :: Keycode,
+    _pressed :: Bool
+  }
   deriving Show
+
+makeLenses ''KeyState
+
 
 data InputState = InputState {
   _up :: KeyState
   , _down :: KeyState
   , _left :: KeyState
   , _right :: KeyState
+  , _quit :: KeyState
             }
   deriving Show
 
 makeLenses ''InputState
 
-myKeys = InputState { _up    = KeyState KeycodeM False
-                       , _down  = KeyState KeycodeT False
-                       , _left  = KeyState KeycodeS False
-                       , _right = KeyState KeycodeN False
-                       }
+myKeys = InputState {
+                        _up    = (KeyState KeycodeM False)
+                      , _down  = (KeyState KeycodeT False)
+                      , _left  = (KeyState KeycodeS False)
+                      , _right = (KeyState KeycodeN False)
+                      , _quit  = (KeyState KeycodeQ False)
+                    }
 
 data InputEffect =
   Exit Bool
@@ -98,7 +107,7 @@ vectorizeMovementGood :: InputState -> GameState -> GameState
 vectorizeMovementGood inputState state = (player . location) `over` ((+) (coerce (vectorizeMovement inputState))) $ state
 
 vectorizeMovement :: InputState -> MovementVector
-vectorizeMovement (InputState (KeyState keycode1 isPressed1) (KeyState keycode2 isPressed2) (KeyState keycode3 isPressed3) (KeyState keycode4 isPressed4))
+vectorizeMovement (InputState (KeyState keycode1 isPressed1) (KeyState keycode2 isPressed2) (KeyState keycode3 isPressed3) (KeyState keycode4 isPressed4) (KeyState _ _))
   =
     -- Horizontal
     coerce
@@ -130,13 +139,14 @@ inputStateUpdateSINGLE event state =
     Nothing -> state
 
 inputStateUpdateTEST :: InputState -> KeyState -> InputState
-inputStateUpdateTEST a@(InputState (KeyState keycode1 isPressed1) (KeyState keycode2 isPressed2) (KeyState keycode3 isPressed3) (KeyState keycode4 isPressed4)) (KeyState newKeyCode newIsPressed)
+inputStateUpdateTEST a@(InputState (KeyState keycode1 isPressed1) (KeyState keycode2 isPressed2) (KeyState keycode3 isPressed3) (KeyState keycode4 isPressed4) (KeyState keycode5 isPressed5)) (KeyState newKeyCode newIsPressed)
   = case (newKeyCode == keycode1) of
     True ->
       (InputState (KeyState keycode1 newIsPressed)
                      (KeyState keycode2 isPressed2)
                      (KeyState keycode3 isPressed3)
                      (KeyState keycode4 isPressed4)
+                           (KeyState keycode5 isPressed5)
       )
     False -> case (newKeyCode == keycode2) of
       True ->
@@ -144,6 +154,7 @@ inputStateUpdateTEST a@(InputState (KeyState keycode1 isPressed1) (KeyState keyc
                        (KeyState keycode2 newIsPressed)
                        (KeyState keycode3 isPressed3)
                        (KeyState keycode4 isPressed4)
+                           (KeyState keycode5 isPressed5)
         )
       False -> case (newKeyCode == keycode3) of
         True ->
@@ -151,6 +162,7 @@ inputStateUpdateTEST a@(InputState (KeyState keycode1 isPressed1) (KeyState keyc
                          (KeyState keycode2 isPressed2)
                          (KeyState keycode3 newIsPressed)
                          (KeyState keycode4 isPressed4)
+                           (KeyState keycode5 isPressed5)
           )
         False -> case (newKeyCode == keycode4) of
           True ->
@@ -158,9 +170,17 @@ inputStateUpdateTEST a@(InputState (KeyState keycode1 isPressed1) (KeyState keyc
                            (KeyState keycode2 isPressed2)
                            (KeyState keycode3 isPressed3)
                            (KeyState keycode4 newIsPressed)
+                           (KeyState keycode5 isPressed5)
             )
-          False ->
-            a
+          False -> case (newKeyCode == keycode5) of
+              True ->
+                (InputState (KeyState keycode1 isPressed1)
+                               (KeyState keycode2 isPressed2)
+                               (KeyState keycode3 isPressed3)
+                               (KeyState keycode4 isPressed4)
+                               (KeyState keycode5 newIsPressed))
+              False ->
+                a
 
 -- *** Event -> Keystate
 eventToKeyState :: SDL.Event -> Maybe KeyState
@@ -212,7 +232,8 @@ main2 = do
           (InputState (KeyState KeycodeN False)
                              (KeyState KeycodeS False)
                              (KeyState KeycodeT False)
-                             (KeyState KeycodeM False))
+                             (KeyState KeycodeM False)
+                             (KeyState KeycodeQ False))
           (GameState (Player (V2 0 0)))
 
   -- We might need to destroy more than just the window and renderer in the future
@@ -250,33 +271,18 @@ todo4 :: Y.SF (Y.Event [SDL.Event]) (NewPos, Bool)
 todo4 = proc events -> do
   test <- todo -< events
   man <- todo5 -< (Y.Event (vectorizeMovement test))
-  returnA -< (coerce man, False)
+  returnA -< (coerce man, (_pressed . _quit) test)
+             -- maaan test)
+             -- _quit . _pressed test )
 
 todo5 :: Y.SF (Y.Event MovementVector) NewPos
 todo5 = accumHoldBy todo6 (V2 0 0)
-
 
 todo6 :: NewPos -> MovementVector -> NewPos
 todo6 oldPos inputState = 
   oldPos + coerce inputState
 
 spritePath = "data/testSprite.png"
-
--- -- Exported as abstract type. Fields are accessed with signal functions.
--- data AppInput = AppInput
---     {
---       inpKeyPressed :: Maybe Scancode
---       inpKeyPressed :: Maybe Scancode
---     , inpQuit       :: Bool                    -- ^ SDL's QuitEvent
---     }
-
--- initAppInput :: AppInput
--- initAppInput = AppInput { inpMousePos   = (0, 0)
---                         , inpMouseLeft  = Nothing
---                         , inpMouseRight = Nothing
---                         , inpKeyPressed = Nothing
---                         , inpQuit       = False
---                         }
 
 main :: IO ()
 main = do
@@ -298,11 +304,10 @@ main = do
   destroyWindow window
 
 render :: SDL.Renderer -> SDL.Sprite.Sprite -> (V2 CInt, Bool) -> IO Bool
-render renderer sprite (a, _) =
+render renderer sprite (a, quit) =
   do
-    D.traceM ("test:" ++ show a)
     rendererDrawColor renderer $= V4 0 0 100 255
     clear renderer 
     SDL.Sprite.render sprite a
     present renderer
-    return False
+    return quit
