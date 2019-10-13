@@ -1,7 +1,11 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
+module Main ( main ) where
 
 import FRP.BearRiver as B
 import FRP.Yampa as Y
@@ -14,18 +18,22 @@ import Data.String ( fromString )
 import Foreign.C.Types ( CInt )
 
 import Input
+import Types ()
 
--- newtype Player = Player { _location :: V2 CInt }
+import Control.Concurrent ( newMVar, swapMVar )
 
--- data GameState = GameState {_player :: Player}
+import qualified Debug.Trace as Tr 
 
--- makeLenses ''Player
+newtype Object = Object { _location :: V2 CInt }
+
+data Resources = Resources {_objectSprite :: SDL.Sprite.Sprite }
+data GameState = GameState {_testObject :: Object }
 
 spritePath :: FilePath
 spritePath = "data/testSprite.png"
 
-render :: SDL.Renderer -> SDL.Sprite.Sprite -> (V2 CInt, Bool) -> IO Bool
-render renderer sprite (a, exit) =
+render :: SDL.Renderer -> Resources -> (GameState, Bool) -> IO Bool
+render renderer (Resources sprite) (GameState (Object a), exit) =
   do
     rendererDrawColor renderer $= V4 0 0 100 255
     clear renderer 
@@ -33,13 +41,31 @@ render renderer sprite (a, exit) =
     present renderer
     return exit
 
-update :: Y.SF (Y.Event [SDL.Event]) (V2 CInt, Bool)
+-- data InputEffect =
+--   Exit Bool
+--   | Move (InputState -> GameState -> GameState)
+  
+-- evalInputState :: GameState -> InputState -> GameState
+-- evalInputState (GameState (Object obj)) inputState = 
+--   GameState (Object
+--               (obj + vectorizeMovement inputState))
+
+objectSpeed :: V2 Double
+objectSpeed = 100
+
+movingObject :: V2 Double -> Y.SF (V2 CInt) Object
+movingObject initialPos = proc move -> do
+  p <- Y.integralFrom initialPos -< objectSpeed * fmap fromIntegral move 
+  returnA -< (Object (fmap floor p))
+
+update :: Y.SF (Y.Event [SDL.Event]) (GameState, Bool)
 update = proc events -> do
   updateInputState <- accumHoldBy inputStateUpdate keybinds -< events
 
-  cubePos <- accumHoldBy (+) (V2 0 0) -< Y.Event (vectorizeMovement updateInputState)
+  gameState <- movingObject (V2 0 0) -< vectorizeMovement updateInputState
+  -- gameState <- accumHoldBy evalInputState (GameState (Object (V2 0 0))) -< Y.Event updateInputState
 
-  returnA -< (cubePos, (_pressed . _quit) updateInputState)
+  returnA -< (GameState gameState, (_pressed . _quit) updateInputState)
   
 main :: IO ()
 main = do
@@ -49,13 +75,18 @@ main = do
   renderer   <- createRenderer window (-1) defaultRenderer
   spritetest <- SDL.Sprite.load renderer spritePath (V2 500 500)
 
-  reactimate (return Y.NoEvent)
-                  (\ _ -> do
-                     -- threadDelay 100000
-                     test <- Y.Event <$> SDL.pollEvents
-                     return (0.1, Just test))
-                  (\ _ -> render renderer spritetest)
-                  update
+  let resources = Resources spritetest
+
+  lastInteraction <- newMVar =<< SDL.time
+
+  let senseInput _canBlock = do
+          currentTime <- SDL.time
+          dt <- (currentTime -) <$> swapMVar lastInteraction currentTime
+          test <- Y.Event <$> SDL.pollEvents
+          return (dt, Just test)
+
+  reactimate (return Y.NoEvent) senseInput (\ _ -> render renderer resources) update
   
   destroyRenderer renderer
   destroyWindow window
+

@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Arrows #-}
 
 module Input
@@ -31,10 +29,6 @@ data KeyState = KeyState {
     _pressed :: Bool
   }
   deriving Show
-
--- data InputEffect =
---   Exit Bool
---   | Move (InputState -> GameState -> GameState)
 
 data InputState = InputState {
   _up :: KeyState
