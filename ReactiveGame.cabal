@@ -25,3 +25,4 @@ executable ReactiveGame
                 , sdl2-sprite
                 , dunai
                 , bearriver
+                , template-haskell
