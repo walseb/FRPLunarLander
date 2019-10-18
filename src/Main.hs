@@ -21,9 +21,11 @@ import Foreign.C.Types ( CInt )
 import Input
 import Types ()
 
-import Control.Concurrent ( newMVar, swapMVar )
+import Control.Concurrent ( newMVar, swapMVar, threadDelay )
 
 import Control.Lens
+
+import qualified Debug.Trace as Tr  
 
 newtype Size = Size (V2 CInt)
   
@@ -38,25 +40,42 @@ makeLenses ''Object
 data Resources = Resources {_objectSprite :: SDL.Sprite.Sprite }
 makeLenses ''Resources
   
-data GameState = GameState {
-    _testObject :: Object
+data Objects = Objects {
+    _player :: Object
   , _enemies :: [Object]
+  }
+makeLenses ''Objects
+  
+data GameState = GameState {
+    _objects :: Objects
   }
 makeLenses ''GameState
 
 spritePath :: FilePath
 spritePath = "data/testSprite.png"
 
-initialGame = GameState
-              (Object (V2 0 0) (Size (V2 500 500)) True)
-              [(Object (V2 600 600) (Size (V2 500 500)) True)]
+initialGame =
+  GameState
+  (Objects
+              (Object (V2 100 100) (Size (V2 500 500)) True)
+              [(Object (V2 600 600) (Size (V2 500 500)) True)])
 
 render :: SDL.Renderer -> Resources -> (GameState, Bool) -> IO Bool
-render renderer (Resources sprite) (GameState (Object a _ _) (x:_), exit) =
+render renderer (Resources sprite) (GameState (Objects (Object a _ alive0) (x:_)), exit) =
   do
+    -- threadDelay 1000000
+
     rendererDrawColor renderer $= V4 0 0 100 255
     clear renderer 
-    SDL.Sprite.render sprite a
+    -- Tr.traceM ("RENDER PLAYER ALIVE: " ++ show ((fst thing) ^. (objects . player . alive)))
+  
+    -- Tr.traceM ("POS PLAYER ALIVE: " ++ show a)
+    case alive0 of
+      True ->
+        SDL.Sprite.render sprite a
+      False ->
+        pure ()
+
     SDL.Sprite.render sprite (x ^. pos)
     present renderer
     return exit
@@ -81,11 +100,15 @@ collides
     y0 < y1 + sizeY1 && 
     sizeY0 + y0 > y1
 
--- TODO this just checks against the first enemy
-checkCollisions :: GameState -> GameState
-checkCollisions state = (testObject . alive) `set` hasCollided $ state
-  where hasCollided = collides (state ^. (testObject . pos), state ^. (testObject . size))
-                               (state ^. enemies . to head . pos, state ^. enemies . to head . size)
+checkCollisions :: Y.SF Objects Bool
+checkCollisions = proc state -> do
+  case state ^. (player . alive) of
+    True ->
+      returnA -< isColliding state
+                   where isColliding s = collides (s ^. (player . pos)         , s ^. (player . size))
+                                                  (s ^. enemies . to head . pos, s ^. enemies . to head . size)
+    False ->
+      returnA -< False
 
 objectSpeed :: V2 Double
 objectSpeed = 100
@@ -94,25 +117,42 @@ movingObject :: V2 Double -> Y.SF (V2 CInt) (V2 CInt)
 movingObject initialPos = proc move -> do
   -- Stop moving or something if a collision is detected
   p <- Y.integralFrom initialPos -< objectSpeed * fmap fromIntegral move 
-  returnA -< (fmap floor p)
+  returnA -< fmap floor p
 
-applyInputs :: Y.SF (GameState, InputState) GameState
-applyInputs = proc input -> do
-  objPos <- movingObject (V2 0 0) -< vectorizeMovement $ snd input
+applyInputs :: GameState -> Y.SF InputState GameState
+applyInputs initialGameState = proc input -> do
+  -- Calculate new pos without modifying state
+  objPos <- movingObject (fmap fromIntegral (initialGameState ^. (objects . player . pos))) -< vectorizeMovement input
 
-  let newState = (.~) (testObject . pos) objPos $ fst input
+  let objects = (Objects
+                  -- Player
+                  (Object objPos (Size (V2 500 500)) True)
+                  -- Test
+                  [(Object (V2 600 600) (Size (V2 500 500)) True)])
 
-  returnA -< checkCollisions newState
+  isPlayerDead <- checkCollisions -< objects
+
+  let objectsNew = (player . alive) .~ isPlayerDead $ objects
+
+  -- playerAlive <- checkCollisions
+
+  let updatedState = (GameState objectsNew)
+
+  -- let updateState = updatePlayerPos $ checkCollisions (fst input)
+  --                     where
+  --                       updatePlayerPos = (player . pos) .~ objPos
+
+  returnA -< updatedState
 
 update :: GameState -> Y.SF (Y.Event [SDL.Event]) (GameState, Bool)
 update origGameState = proc events -> do
   newInputState <- accumHoldBy inputStateUpdate keybinds -< events
 
-  gameState <- applyInputs -< (origGameState, newInputState)
+  gameState <- applyInputs origGameState -< (newInputState)
 
   returnA -< (gameState,
-                (_pressed . _quit) newInputState
-              || (_alive . _testObject) gameState)
+                (_pressed . _quit) newInputState)
+              -- || (_alive . _player) gameState)
 
 main :: IO ()
 main = do
