@@ -56,20 +56,18 @@ spritePath = "data/testSprite.png"
 
 initialGame =
   GameState
-  (Objects
-              (Object (V2 100 100) (Size (V2 500 500)) True)
-              [(Object (V2 600 600) (Size (V2 500 500)) True)])
+    (Objects
+      (Object (V2 0 0) (Size (V2 500 500)) True)
+      [(Object (V2 600 600) (Size (V2 500 500)) True)])
 
 render :: SDL.Renderer -> Resources -> (GameState, Bool) -> IO Bool
 render renderer (Resources sprite) (GameState (Objects (Object a _ alive0) (x:_)), exit) =
   do
-    -- threadDelay 1000000
+    -- threadDelay 100000
 
     rendererDrawColor renderer $= V4 0 0 100 255
     clear renderer 
-    -- Tr.traceM ("RENDER PLAYER ALIVE: " ++ show ((fst thing) ^. (objects . player . alive)))
-  
-    -- Tr.traceM ("POS PLAYER ALIVE: " ++ show a)
+
     case alive0 of
       True ->
         SDL.Sprite.render sprite a
@@ -79,15 +77,6 @@ render renderer (Resources sprite) (GameState (Objects (Object a _ alive0) (x:_)
     SDL.Sprite.render sprite (x ^. pos)
     present renderer
     return exit
-
--- data InputEffect =
---   Exit Bool
---   | Move (InputState -> GameState -> GameState)
-  
--- evalInputState :: GameState -> InputState -> GameState
--- evalInputState (GameState (Object obj)) inputState = 
---   GameState (Object
---               (obj + vectorizeMovement inputState))
 
 collides :: (V2 CInt, Size) -> (V2 CInt, Size) -> Bool
 collides
@@ -100,15 +89,20 @@ collides
     y0 < y1 + sizeY1 && 
     sizeY0 + y0 > y1
 
-checkCollisions :: Y.SF Objects Bool
-checkCollisions = proc state -> do
-  case state ^. (player . alive) of
-    True ->
-      returnA -< isColliding state
-                   where isColliding s = collides (s ^. (player . pos)         , s ^. (player . size))
-                                                  (s ^. enemies . to head . pos, s ^. enemies . to head . size)
-    False ->
-      returnA -< False
+checkCollisionsEvent :: Y.SF ((V2 CInt, Size), (V2 CInt, Size)) (Bool, Y.Event ())
+checkCollisionsEvent = proc state -> do
+  let test = case collides (fst state) (snd state) of
+               True -> (False, Y.Event ())
+               False -> (True, Y.NoEvent) 
+  returnA -< test
+
+checkCollisions' :: () -> Y.SF ((V2 CInt, Size), (V2 CInt, Size)) Bool
+checkCollisions' _ = 
+  constant False
+
+checkCollisions :: Y.SF ((V2 CInt, Size), (V2 CInt, Size)) Bool
+checkCollisions = 
+  B.switch checkCollisionsEvent checkCollisions'
 
 objectSpeed :: V2 Double
 objectSpeed = 100
@@ -123,36 +117,29 @@ applyInputs :: GameState -> Y.SF InputState GameState
 applyInputs initialGameState = proc input -> do
   -- Calculate new pos without modifying state
   objPos <- movingObject (fmap fromIntegral (initialGameState ^. (objects . player . pos))) -< vectorizeMovement input
+  let playerSize = initialGameState ^. (objects . player . size)
 
-  let objects = (Objects
+  enemyPos <- movingObject (fmap fromIntegral (initialGameState ^. (objects . enemies . to head . pos))) -< (V2 0 (-1))
+  let enemySize = initialGameState ^. (objects . enemies . to head . size)
+  
+  isPlayerAlive <- checkCollisions -< ((objPos, (Size (V2 500 500))), (enemyPos, enemySize))
+
+  let objectState = (Objects
                   -- Player
-                  (Object objPos (Size (V2 500 500)) True)
+                  (Object objPos playerSize isPlayerAlive)
                   -- Test
-                  [(Object (V2 600 600) (Size (V2 500 500)) True)])
+                  [(Object enemyPos enemySize True)])
 
-  isPlayerDead <- checkCollisions -< objects
-
-  let objectsNew = (player . alive) .~ isPlayerDead $ objects
-
-  -- playerAlive <- checkCollisions
-
-  let updatedState = (GameState objectsNew)
-
-  -- let updateState = updatePlayerPos $ checkCollisions (fst input)
-  --                     where
-  --                       updatePlayerPos = (player . pos) .~ objPos
-
-  returnA -< updatedState
+  returnA -< GameState objectState
 
 update :: GameState -> Y.SF (Y.Event [SDL.Event]) (GameState, Bool)
 update origGameState = proc events -> do
   newInputState <- accumHoldBy inputStateUpdate keybinds -< events
 
-  gameState <- applyInputs origGameState -< (newInputState)
+  gameState <- applyInputs origGameState -< newInputState
 
   returnA -< (gameState,
                 (_pressed . _quit) newInputState)
-              -- || (_alive . _player) gameState)
 
 main :: IO ()
 main = do
