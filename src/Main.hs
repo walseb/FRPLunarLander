@@ -103,20 +103,19 @@ checkCollisions =
 objectSpeed :: V2 Double
 objectSpeed = 100
 
--- objectGravity :: Double
 objectGravity = V2 0 100
 
-movingObject' :: V2 Double -> Y.SF Bool (V2 CInt, Y.Event Bool)
-movingObject' initialPos = proc input -> do
-  v <- Y.integralFrom initialPos -< objectGravity
-  p <- Y.integralFrom 0 -< v
+shipMovement :: V2 Double -> V2 Double -> Y.SF Bool (V2 CInt, Y.Event (V2 Double, V2 Double))
+shipMovement initialPos initialVelocity = proc input -> do
+  v <- Y.integralFrom initialVelocity -< objectGravity
+  p <- Y.integralFrom initialPos -< v
   returnA -< (fmap floor p, case input of
-                              True -> Y.Event True            
+                              True -> Y.Event (p, v)
                               False -> Y.NoEvent)
 
-fallingObject :: V2 Double -> Y.SF Bool (V2 CInt)
-fallingObject initialPos = 
-  B.switch (Y.iPre False >>> movingObject' initialPos) (\_ -> fallingObject (V2 1 100))
+shipControls :: V2 Double -> V2 Double -> Y.SF Bool (V2 CInt)
+shipControls initialPos initialVel = 
+  B.switch (Y.iPre False >>> shipMovement initialPos initialVel) (\(pos, V2 velX velY) -> shipControls pos (V2 velX (velY - 10)))
 
 movingObject :: V2 Double -> Y.SF (V2 CInt) (V2 CInt)
 movingObject initialPos = proc move -> do
@@ -127,7 +126,7 @@ movingObject initialPos = proc move -> do
 applyInputs :: GameState -> Y.SF InputState GameState
 applyInputs initialGameState = proc input -> do
   -- Calculate new pos without modifying state
-  objPos <- fallingObject 0 -< (input ^. (up . pressed))
+  objPos <- shipControls 0 0 -< (input ^. (up . pressed))
   -- objPos <- movingObject (fmap fromIntegral (initialGameState ^. (objects . player . pos))) -< vectorizeMovement input
   let playerSize = initialGameState ^. (objects . player . size)
 
