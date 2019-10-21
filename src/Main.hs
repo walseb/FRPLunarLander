@@ -21,11 +21,11 @@ import Foreign.C.Types ( CInt )
 import Input
 import Types ()
 
-import Control.Concurrent ( newMVar, swapMVar, threadDelay )
+import Control.Concurrent ( newMVar, swapMVar) --, threadDelay )
 
 import Control.Lens
 
-import qualified Debug.Trace as Tr  
+import qualified Debug.Trace as Tr 
 
 newtype Size = Size (V2 CInt)
   
@@ -76,6 +76,7 @@ render renderer (Resources sprite) (GameState (Objects (Object a _ alive0) (x:_)
 
     SDL.Sprite.render sprite (x ^. pos)
     present renderer
+
     return exit
 
 collides :: (V2 CInt, Size) -> (V2 CInt, Size) -> Bool
@@ -90,22 +91,32 @@ collides
     sizeY0 + y0 > y1
 
 checkCollisionsEvent :: Y.SF ((V2 CInt, Size), (V2 CInt, Size)) (Bool, Y.Event ())
-checkCollisionsEvent = proc state -> do
-  let test = case collides (fst state) (snd state) of
+checkCollisionsEvent = proc state -> 
+  returnA -< case uncurry collides state of
                True -> (False, Y.Event ())
                False -> (True, Y.NoEvent) 
-  returnA -< test
-
-checkCollisions' :: () -> Y.SF ((V2 CInt, Size), (V2 CInt, Size)) Bool
-checkCollisions' _ = 
-  constant False
 
 checkCollisions :: Y.SF ((V2 CInt, Size), (V2 CInt, Size)) Bool
 checkCollisions = 
-  B.switch checkCollisionsEvent checkCollisions'
+  B.switch checkCollisionsEvent (\_ -> constant False)
 
 objectSpeed :: V2 Double
 objectSpeed = 100
+
+-- objectGravity :: Double
+objectGravity = V2 0 100
+
+movingObject' :: V2 Double -> Y.SF Bool (V2 CInt, Y.Event Bool)
+movingObject' initialPos = proc input -> do
+  v <- Y.integralFrom initialPos -< objectGravity
+  p <- Y.integralFrom 0 -< v
+  returnA -< (fmap floor p, case input of
+                              True -> Y.Event True            
+                              False -> Y.NoEvent)
+
+fallingObject :: V2 Double -> Y.SF Bool (V2 CInt)
+fallingObject initialPos = 
+  B.switch (Y.iPre False >>> movingObject' initialPos) (\_ -> fallingObject (V2 1 100))
 
 movingObject :: V2 Double -> Y.SF (V2 CInt) (V2 CInt)
 movingObject initialPos = proc move -> do
@@ -116,7 +127,8 @@ movingObject initialPos = proc move -> do
 applyInputs :: GameState -> Y.SF InputState GameState
 applyInputs initialGameState = proc input -> do
   -- Calculate new pos without modifying state
-  objPos <- movingObject (fmap fromIntegral (initialGameState ^. (objects . player . pos))) -< vectorizeMovement input
+  objPos <- fallingObject 0 -< (input ^. (up . pressed))
+  -- objPos <- movingObject (fmap fromIntegral (initialGameState ^. (objects . player . pos))) -< vectorizeMovement input
   let playerSize = initialGameState ^. (objects . player . size)
 
   enemyPos <- movingObject (fmap fromIntegral (initialGameState ^. (objects . enemies . to head . pos))) -< (V2 0 (-1))
@@ -125,10 +137,10 @@ applyInputs initialGameState = proc input -> do
   isPlayerAlive <- checkCollisions -< ((objPos, (Size (V2 500 500))), (enemyPos, enemySize))
 
   let objectState = (Objects
-                  -- Player
-                  (Object objPos playerSize isPlayerAlive)
-                  -- Test
-                  [(Object enemyPos enemySize True)])
+                      -- Player
+                      (Object objPos playerSize isPlayerAlive)
+                      -- Test
+                      [(Object enemyPos enemySize True)])
 
   returnA -< GameState objectState
 
@@ -139,7 +151,7 @@ update origGameState = proc events -> do
   gameState <- applyInputs origGameState -< newInputState
 
   returnA -< (gameState,
-                (_pressed . _quit) newInputState)
+                 newInputState ^. (Input.quit . pressed))
 
 main :: IO ()
 main = do

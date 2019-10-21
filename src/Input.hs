@@ -1,4 +1,5 @@
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Input
   ( -- Running an app
@@ -7,8 +8,9 @@ module Input
   , vectorizeMovement
   , keybinds
   , KeyState
-  , _pressed
-  , _quit
+  , pressed
+  , up
+  , Input.quit
   )
 
 where
@@ -24,11 +26,15 @@ import           Control.Monad                  ( (>=>) )
 
 import           Data.Maybe
 
+import Control.Lens
+
 data KeyState = KeyState {
     _key     :: Keycode,
     _pressed :: Bool
   }
   deriving Show
+
+makeLenses ''KeyState
 
 data InputState = InputState {
   _up :: KeyState
@@ -38,6 +44,8 @@ data InputState = InputState {
   , _quit :: KeyState
             }
   deriving Show
+
+makeLenses ''InputState
 
 keybinds = InputState { _up    = KeyState KeycodeM False
                       , _down  = KeyState KeycodeT False
