@@ -1,10 +1,16 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module Types () where
-import           FRP.Yampa                     as Y
+module Types
+  (
+  )
+where
 
-import           SDL
+import FRP.Yampa as Y
+import Foreign.C.Types (CDouble)
+import SDL
+
+import Foreign.C.Types ( CDouble )
 
 instance (Eq a, Floating a) => Y.VectorSpace (V2 a) a where
     zeroVector = V2 0 0
@@ -14,3 +20,12 @@ instance (Eq a, Floating a) => Y.VectorSpace (V2 a) a where
     (V2 x1 y1) ^+^ (V2 x2 y2) = V2 (x1 + x2) (y1 + y2)
     (V2 x1 y1) ^-^ (V2 x2 y2) = V2 (x1 - x2) (y1 - y2)
     (V2 x1 y1) `dot` (V2 x2 y2) = x1 * x2 + y1 * y2
+
+instance VectorSpace CDouble CDouble where
+    zeroVector = 0
+    a *^ x = a * x
+    x ^/ a = x / a
+    negateVector x = (-x)
+    x1 ^+^ x2 = x1 + x2
+    x1 ^-^ x2 = x1 - x2
+    x1 `dot` x2 = x1 * x2
