@@ -77,7 +77,7 @@ renderEx s xy sourceRect destSize rot centerRot flip =
     (spriteTexture s)
     sourceRect
     (Just (Rectangle (P xy) destSize))
-    rot
+    (-rot)
     centerRot
     flip
 {-# INLINE renderEx #-}

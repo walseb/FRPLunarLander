@@ -1,13 +1,9 @@
 {-# LANGUAGE Arrows #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
 
-module Collision
+module Collision.GJK
   ( Size (..),
     checkCollisions,
-  debugRenderHitbox
+    debugRenderHitbox,
   )
 where
 
@@ -21,20 +17,25 @@ import GJK.Support
 import Linear
 import qualified SDL.Vect as SV
 import qualified Sprite as SP
-import Types ()
+import Types (Size (..))
 
-newtype Size = Size (V2 CInt)
+checkCollisions :: Y.SF ((V2 CInt, Size, Double), (V2 CInt, Size, Double)) Bool
+checkCollisions =
+  B.switch
+    checkCollisionsEvent
+    ( \a ->
+        Tr.trace
+          ("Player dead!!: Here: " ++ show a)
+          constant
+          False
+    )
 
-collisionAABBCheck :: (V2 CInt, Size) -> (V2 CInt, Size) -> Bool
-collisionAABBCheck
-  -- Box1
-  (V2 x0 y0, Size (V2 sizeX0 sizeY0))
-  -- Box2
-  (V2 x1 y1, Size (V2 sizeX1 sizeY1)) =
-    x0 < x1 + sizeX1
-      && x0 + sizeX0 > x1
-      && y0 < y1 + sizeY1
-      && sizeY0 + y0 > y1
+checkCollisionsEvent :: Y.SF ((V2 CInt, Size, Double), (V2 CInt, Size, Double)) (Bool, Y.Event ())
+checkCollisionsEvent = proc (a, b) ->
+  returnA -< case collides a b of
+    Just True -> (False, Y.Event ())
+    Just False -> (True, Y.NoEvent)
+    Nothing -> (True, Y.NoEvent)
 
 v2ToTuple :: V2 a -> (a, a)
 v2ToTuple (V2 x y) = (x, y)
@@ -80,24 +81,6 @@ collides (pos, size, rot) (pos', size', rot') =
   where
     a = (toPt pos size rot, polySupport)
     b = (toPt pos' size' rot', polySupport)
-
-checkCollisions :: Y.SF ((V2 CInt, Size, Double), (V2 CInt, Size, Double)) Bool
-checkCollisions =
-  B.switch
-    checkCollisionsEvent
-    ( \a ->
-        Tr.trace
-          ("Player dead!!: Here: " ++ show a)
-          constant
-          False
-    )
-
-checkCollisionsEvent :: Y.SF ((V2 CInt, Size, Double), (V2 CInt, Size, Double)) (Bool, Y.Event ())
-checkCollisionsEvent = proc (a, b) ->
-  returnA -< case collides a b of
-    Just True -> (False, Y.Event ())
-    Just False -> (True, Y.NoEvent)
-    Nothing -> (True, Y.NoEvent)
 
 -- TODO Make it use a V2 instead
 moveAlongAxis :: (Integral a, RealFloat b) => V2 a -> b -> b -> V2 a

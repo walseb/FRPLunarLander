@@ -6,8 +6,6 @@ module Input where
 import Control.Lens
 import Control.Monad ((>=>))
 import Data.Maybe
-import FRP.BearRiver as B
-import FRP.Yampa as Y
 import Foreign.C.Types (CInt)
 import SDL
 

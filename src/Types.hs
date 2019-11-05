@@ -1,31 +1,40 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Types
-  (
-  )
-where
+module Types where
 
-import FRP.Yampa as Y
-import Foreign.C.Types (CDouble)
-import SDL
+import Control.Lens
+import Foreign.C.Types
+import Linear
+import qualified Sprite as SP
+import YampaUtils.Types ()
 
-import Foreign.C.Types ( CDouble )
+newtype Size = Size (V2 CInt)
 
-instance (Eq a, Floating a) => Y.VectorSpace (V2 a) a where
-    zeroVector = V2 0 0
-    a *^ (V2 x y) = V2 (a * x) (a * y)
-    (V2 x y) ^/ a = V2 (x / a) (y / a)
-    negateVector (V2 x y) = V2 (-x) (-y)
-    (V2 x1 y1) ^+^ (V2 x2 y2) = V2 (x1 + x2) (y1 + y2)
-    (V2 x1 y1) ^-^ (V2 x2 y2) = V2 (x1 - x2) (y1 - y2)
-    (V2 x1 y1) `dot` (V2 x2 y2) = x1 * x2 + y1 * y2
+data Object
+  = Object
+      { _pos :: V2 CInt,
+        _size :: Size,
+        _rot :: Double,
+        _alive :: Bool
+      }
 
-instance VectorSpace CDouble CDouble where
-    zeroVector = 0
-    a *^ x = a * x
-    x ^/ a = x / a
-    negateVector x = (-x)
-    x1 ^+^ x2 = x1 + x2
-    x1 ^-^ x2 = x1 - x2
-    x1 `dot` x2 = x1 * x2
+makeLenses ''Object
+
+data Resources = Resources {_objectSprite :: SP.Sprite}
+
+makeLenses ''Resources
+
+data Objects
+  = Objects
+      { _player :: Object,
+        _enemies :: [Object]
+      }
+
+makeLenses ''Objects
+
+data GameState
+  = GameState
+      { _objects :: Objects
+      }
+
+makeLenses ''GameState
