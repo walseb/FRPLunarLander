@@ -19,10 +19,10 @@ executable ReactiveGame
                 , extra
                 , lens
                 , linear
-                , monad-loops
                 , sdl2
                 , sdl2-image
                 , sdl2-sprite
                 , dunai
                 , bearriver
                 , template-haskell
+                , gjk
