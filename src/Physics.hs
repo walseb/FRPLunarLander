@@ -4,18 +4,18 @@ module Physics where
 
 import FRP.BearRiver as B
 import FRP.Yampa as Y
-import Foreign.C.Types
 import Linear
 import YampaUtils.Types ()
 
-objectGravity :: V2 Double
+objectGravity :: (Fractional a) => V2 a
 objectGravity = V2 0 100
 
-objectSpeed :: V2 Double
+objectSpeed :: (Integral a) => a
 objectSpeed = 100
 
-movingObject :: V2 Double -> Y.SF (V2 CInt) (V2 CInt)
+movingObject :: (RealFloat a) => V2 a -> Y.SF (V2 a) (V2 a)
 movingObject initialPos = proc move -> do
   -- Stop moving or something if a collision is detected
-  p <- Y.integralFrom initialPos -< objectSpeed * fmap fromIntegral move
-  returnA -< fmap floor p
+  -- TODO: this fromIntegral seems to convert the numbers into Integer which is inefficient
+  p <- Y.integralFrom initialPos -< (fromIntegral objectSpeed * move)
+  returnA -< p

@@ -8,8 +8,7 @@ where
 --, threadDelay )
 
 import Collision.GJK
-  ( Size (..),
-    checkCollisions,
+  ( checkCollisions,
   )
 import Control.Concurrent
   ( newMVar,
@@ -23,31 +22,29 @@ import FRP.Yampa as Y
 import Foreign.C.Types
 import Input
 import Linear
+import Physics (movingObject)
 import qualified SDL as S
 import qualified SDL.Vect as SV
+import Ship (shipControl)
 import qualified Sprite as SP
-import YampaUtils.Types ()
 import Types
-import Physics
-import Ship
+import YampaUtils.Types ()
 
 initialGame =
   GameState
     ( Objects
-        (Object (V2 0 0) (Size (V2 500 500)) 0 True)
-        [(Object (V2 300 800) (Size (V2 500 500)) 0 True)]
+        (Object (V2 0 0) (V2 500 500) 0 True)
+        [(Object (V2 300 800) (V2 500 500) 0 True)]
     )
 
 applyInputs :: GameState -> Y.SF InputState Objects
 applyInputs initialGameState = proc input -> do
   -- Calculate new pos without modifying state
   (rot, playerPos) <- shipControl 0 0 -< (input ^. movement)
-
   let playerSize = initialGameState ^. (objects . player . size)
-  enemyPos <- movingObject (fmap fromIntegral (initialGameState ^. (objects . enemies . to head . pos))) -< (V2 0 (-1))
+  enemyPos <- movingObject (initialGameState ^. (objects . enemies . to head . pos)) -< (V2 0 (-1))
   let enemySize = initialGameState ^. (objects . enemies . to head . size)
   isPlayerAlive <- checkCollisions -< ((playerPos, playerSize, rot), (enemyPos, enemySize, 0))
-
   returnA -<
     ( Objects
         -- Player
@@ -74,7 +71,7 @@ render renderer (Resources sprite) (GameState (Objects player objects), exit) =
       True ->
         SP.renderEx
           sprite
-          (player ^. pos)
+          (floor <$> (player ^. pos))
           Nothing
           (V2 500 500)
           (coerce (player ^. rot))
@@ -82,7 +79,7 @@ render renderer (Resources sprite) (GameState (Objects player objects), exit) =
           (V2 False False)
       False ->
         pure ()
-    SP.render sprite (objects ^. (to head . pos)) Nothing (V2 500 500)
+    SP.render sprite (floor <$> (objects ^. (to head . pos))) Nothing (V2 500 500)
     S.present renderer
     return exit
 

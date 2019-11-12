@@ -3,17 +3,16 @@
 module Types where
 
 import Control.Lens
-import Foreign.C.Types
 import Linear
 import qualified Sprite as SP
 import YampaUtils.Types ()
 
-newtype Size = Size (V2 CInt)
+-- newtype Size = Size (V2 Double)
 
 data Object
   = Object
-      { _pos :: V2 CInt,
-        _size :: Size,
+      { _pos :: V2 Double,
+        _size :: V2 Double,
         _rot :: Double,
         _alive :: Bool
       }
