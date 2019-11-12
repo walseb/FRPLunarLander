@@ -19,7 +19,11 @@ data Object
 
 makeLenses ''Object
 
-data Resources = Resources {_objectSprite :: SP.Sprite}
+data Resources
+  = Resources
+      { _objectSprite :: SP.Sprite,
+        _objectSprite2 :: SP.Sprite
+      }
 
 makeLenses ''Resources
 

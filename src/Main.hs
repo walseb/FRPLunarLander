@@ -28,6 +28,7 @@ import qualified SDL.Vect as SV
 import Ship (shipControl)
 import qualified Sprite as SP
 import Types
+import Collision.GJKInternal.Debug
 import YampaUtils.Types ()
 
 initialGame =
@@ -63,7 +64,7 @@ update origGameState = proc events -> do
     )
 
 render :: S.Renderer -> Resources -> (GameState, Bool) -> IO Bool
-render renderer (Resources sprite) (GameState (Objects player objects), exit) =
+render renderer (Resources sprite sprite2) (stateDelete@(GameState (Objects player objects)), exit) =
   do
     S.rendererDrawColor renderer S.$= S.V4 0 0 100 255
     S.clear renderer
@@ -71,20 +72,35 @@ render renderer (Resources sprite) (GameState (Objects player objects), exit) =
       True ->
         SP.renderEx
           sprite
-          (floor <$> (player ^. pos))
+          (floor <$> ((player ^. pos) - ((player ^. size) / 2)))
           Nothing
           (V2 500 500)
           (coerce (player ^. rot))
-          (Just (SV.P (V2 0 0)))
+          (Just (SV.P (fmap floor ((player ^. size) / 2))))
           (V2 False False)
+        >>=
+        \a -> debugHitboxes stateDelete sprite2
+        -- pure ()
       False ->
-        pure ()
-    SP.render sprite (floor <$> (objects ^. (to head . pos))) Nothing (V2 500 500)
+        pure [()]
+    -- SP.render sprite (floor <$> (objects ^. (to head . pos))) Nothing (V2 500 500)
+    SP.renderEx
+      sprite
+      (floor <$> ((objects ^. (to head . pos)) - ((objects ^. (to head . size)) / 2)))
+      Nothing
+      (V2 500 500)
+      (coerce (objects ^. (to head . rot)))
+      (Just (SV.P (fmap floor ((objects ^. (to head . size)) / 2))))
+      (V2 False False)
+
     S.present renderer
     return exit
 
 spritePath :: FilePath
 spritePath = "data/testSprite.png"
+
+spritePath2 :: FilePath
+spritePath2 = "data/banana.png"
 
 main :: IO ()
 main = do
@@ -92,7 +108,8 @@ main = do
   window <- S.createWindow (fromString "My SDL Application") S.defaultWindow
   renderer <- S.createRenderer window (-1) S.defaultRenderer
   spritetest <- SP.load renderer spritePath (V2 500 500)
-  let resources = Resources spritetest
+  spritetest2 <- SP.load renderer spritePath2 (V2 500 500)
+  let resources = Resources spritetest spritetest2
   lastInteraction <- newMVar =<< S.time
   let senseInput _canBlock = do
         currentTime <- S.time
