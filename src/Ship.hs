@@ -27,7 +27,7 @@ shipThrusters initialPos initialVel =
     (Y.iPre False >>> shipMovement initialPos initialVel)
     (\(pos, V2 velX velY) -> shipThrusters pos (V2 velX (velY - 10)))
 
-shipControl :: (RealFloat a) => V2 a -> V2 a -> Y.SF MovementVector (a, V2 a)
+shipControl :: (RealFloat a) => V2 a -> V2 a -> Y.SF DirectionalInput (a, V2 a)
 shipControl initialPos initialVel = proc movement -> do
   let movement2 = movement ^. (up . pressed)
   pos <- shipThrusters initialPos initialVel -< movement2

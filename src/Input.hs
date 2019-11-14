@@ -18,8 +18,8 @@ data KeyState
 
 makeLenses ''KeyState
 
-data MovementVector
-  = MovementVector
+data DirectionalInput
+  = DirectionalInput
       { _up :: KeyState,
         _down :: KeyState,
         _left :: KeyState,
@@ -27,11 +27,11 @@ data MovementVector
       }
   deriving (Show)
 
-makeLenses ''MovementVector
+makeLenses ''DirectionalInput
 
 data InputState
   = InputState
-      { _movement :: MovementVector,
+      { _movement :: DirectionalInput,
         _quit :: KeyState
       }
   deriving (Show)
@@ -40,7 +40,7 @@ makeLenses ''InputState
 
 keybinds = InputState
   { _movement =
-      ( MovementVector
+      ( DirectionalInput
           (KeyState KeycodeM False)
           (KeyState KeycodeT False)
           (KeyState KeycodeS False)
@@ -53,7 +53,7 @@ vectorizeMovement :: InputState -> V2 CInt
 vectorizeMovement
   ( InputState
       -- Movement keys
-      ( MovementVector
+      ( DirectionalInput
           (KeyState _ a0)
           (KeyState _ a1)
           (KeyState _ a2)
@@ -90,9 +90,9 @@ inputStateUpdate = foldr $ \inpEv oldState ->
       inpEv
 
 updateKeyInInputState :: InputState -> KeyState -> InputState
-updateKeyInInputState (InputState (MovementVector b0 b1 b2 b3) b4) c0 =
+updateKeyInInputState (InputState (DirectionalInput b0 b1 b2 b3) b4) c0 =
   InputState
-    ( MovementVector
+    ( DirectionalInput
         (replaceKeystate b0 c0)
         (replaceKeystate b1 c0)
         (replaceKeystate b2 c0)
