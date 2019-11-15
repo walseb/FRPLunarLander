@@ -8,7 +8,7 @@ import Linear
 import YampaUtils.Types ()
 
 objectGravity :: (Fractional a) => V2 a
-objectGravity = V2 0 100
+objectGravity = V2 0 0
 
 objectSpeed :: (Integral a) => a
 objectSpeed = 100

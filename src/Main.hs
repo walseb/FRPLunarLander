@@ -34,14 +34,14 @@ import YampaUtils.Types ()
 initialGame =
   GameState
     ( Objects
-        (Object (V2 0 0) (V2 500 500) 0 True)
-        [(Object (V2 300 800) (V2 500 500) 0 True)]
+        (Object (V2 1000 500) (V2 500 500) 0 True)
+        [(Object (V2 999999 999999) (V2 500 500) 0 True)]
     )
 
 applyInputs :: GameState -> Y.SF InputState Objects
 applyInputs initialGameState = proc input -> do
   -- Calculate new pos without modifying state
-  (rot, playerPos) <- shipControl 0 0 -< (input ^. movement)
+  (rot, playerPos) <- shipControl (initialGameState ^. (objects . player . pos)) 0 -< (input ^. movement)
   let playerSize = initialGameState ^. (objects . player . size)
   enemyPos <- movingObject (initialGameState ^. (objects . enemies . to head . pos)) -< (V2 0 (-1))
   let enemySize = initialGameState ^. (objects . enemies . to head . size)
