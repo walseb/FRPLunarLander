@@ -1,57 +1,46 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Arrows #-}
-{-# LANGUAGE TypeFamilies #-}
 
 module Ship where
 
 import Collision.GJKInternal.Util (moveAlongAxis)
 import Control.Lens
+import FRP.BearRiver as B
+import FRP.Yampa as Y
 import Input
 import Linear
 import Physics
-import RhineUtils.Types ()
-import FRP.Rhine
+import YampaUtils.Types ()
 import qualified Debug.Trace as Tr
 
 -- Return: (V2 a, Y.Event (V2 a, V2 a)) where the first V2 is gravity, and the event contains a position
-
--- Y.Event (V2 a, V2 a, V2 a)
--- shipMovement :: (RealFloat a, a ~ Double, Monad m, TimeDomain td, Diff td ~ Double) => V2 a -> V2 a -> V2 a -> BehaviourF (ExceptT (V2 a, V2 a, V2 a) m) td (Bool, a) (V2 a)
--- shipMovement initPos initVelocity initForce = proc (input, rot) -> do
---   force <- integralFrom initForce -< objectGravity
---   vel <- integralFrom initVelocity -< force
---   pos <- integralFrom initPos -< vel
---   throwMaybe -< if (input == True) then Just (pos, vel, force + moveAlongAxis (V2 0 0) 3 (rot + 90)) else Nothing
---   returnA -< pos
-
-myDelay :: (RealFloat a, Monad m, TimeDomain td, Diff td ~ Double) => V2 a -> BehaviourF (ExceptT () m) td (Bool, a) (V2 a)
-myDelay c = proc b -> do
-  a <- iPre False -< True
-  throwOn () -< a
-  returnA -< c
-
-shipMovement :: (RealFloat a, a ~ Double, Monad m, TimeDomain td, Diff td ~ Double) => V2 a -> V2 a -> V2 a -> BehaviourF (ExceptT (V2 a, V2 a, V2 a) m) td (Bool, a) (V2 a)
+shipMovement :: (RealFloat a) => V2 a -> V2 a -> V2 a -> Y.SF (Bool, a) (V2 a, Y.Event (V2 a, V2 a, V2 a))
 shipMovement initPos initVelocity initForce = proc (input, rot) -> do
-  force <- integralFrom initForce -< objectGravity
-  vel <- integralFrom initVelocity -< force
-  pos <- integralFrom initPos -< vel
-  throwMaybe -< if input then Just (pos, vel, force + moveAlongAxis (V2 0 0) 10 (rot + 90)) else Nothing
-  returnA -< pos
+  force <- Y.integralFrom initForce -< objectGravity
+  vel <- Y.integralFrom initVelocity -< force
+  pos <- Y.integralFrom initPos -< vel
+  returnA -<
+    ( pos,
+      case input of
+        True -> Y.Event (pos, vel, force + moveAlongAxis (V2 0 0) 3 (rot + 90))
+        False -> Y.NoEvent
+    )
 
-shipMovementSwitch :: (RealFloat a, a ~ Double, Monad m, TimeDomain td, Diff td ~ Double) => V2 a -> V2 a -> V2 a -> BehaviourFExcept m td (Bool, a) (V2 a) void
-shipMovementSwitch initPos initVel initForce = do
-  try (myDelay initPos)
-  (pos, vel, force) <- try $ shipMovement initPos initVel initForce
-  shipMovementSwitch pos vel force
+shipMovementSwitch :: (RealFloat a) => V2 a -> V2 a -> V2 a -> Y.SF (Bool, a) (V2 a)
+shipMovementSwitch initPos initVel initForce =
+  B.switch
+    -- TODO the reason why the ship goes faster whenever you hit up is because of the iPre here, it runs the SF faster because it lets the function run at least twice
+    (Y.iPre (False, 0) >>> shipMovement initPos initVel initForce)
+    (\ (a, b, c) -> shipMovementSwitch a b c)
 
-shipControl :: (RealFloat a, a ~ Double, Monad m, TimeDomain td, Diff td ~ Double) => V2 a -> V2 a -> BehaviourF m td DirectionalInput (a, V2 a)
+shipControl :: (RealFloat a) => V2 a -> V2 a -> Y.SF DirectionalInput (a, V2 a)
 shipControl initPos initVel = proc inputDir -> do
   let movement2 = inputDir ^. (up . pressed)
   rot <- shipRotationSwitch 0 -< (inputDir ^. (Input.left . pressed), inputDir ^. (Input.right . pressed))
   -- TODO fix this conversion
-  pos <- safely $ shipMovementSwitch initPos initVel 0 -< (movement2, realToFrac rot)
+  pos <- shipMovementSwitch initPos initVel 0 -< (movement2, realToFrac rot)
   returnA -< (realToFrac rot, pos)
+
 
 -- shipRotationSwitch :: Double -> Y.SF (Bool, Bool) Double
 -- shipRotationSwitch initRot =
@@ -75,10 +64,10 @@ shipControl initPos initVel = proc inputDir -> do
 --     boolToInt :: Bool -> Double
 --     boolToInt a = if a then 0 else 1
 
-shipRotationSwitch :: (Monad m, TimeDomain td, Diff td ~ Double) => Double -> BehaviourF m td (Bool, Bool) Double
+shipRotationSwitch :: Double -> Y.SF (Bool, Bool) Double
 shipRotationSwitch initRot = proc (left, right) -> do
   -- Stop moving or something if a collision is detected
-  rot <- integralFrom initRot -< (boolToInt right - boolToInt left) * 100
+  rot <- B.integralFrom initRot -< (boolToInt right - boolToInt left) * 100
   -- rot <- B.integralFrom initRot -< rotVel
   returnA -< rot
   where

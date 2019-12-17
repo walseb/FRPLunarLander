@@ -22,9 +22,6 @@ executable ReactiveGame
                 , sdl2
                 , sdl2-image
                 , sdl2-sprite
+                , bearriver
                 , template-haskell
                 , gjk
-                , dunai
-                , bearriver
-                , rhine
-                , dunai

@@ -1,6 +1,4 @@
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Arrows #-}
-{-# LANGUAGE TypeFamilies #-}
 
 module Collision.GJK
   ( checkCollisions )
@@ -8,47 +6,30 @@ where
 
 import Collision.GJKInternal.Support
 import qualified Debug.Trace as Tr
--- import FRP.BearRiver as B
--- import FRP.Yampa as Y
-import FRP.Rhine
+import FRP.BearRiver as B
+import FRP.Yampa as Y
 import GJK.Collision
 import GJK.Mink (Mink)
 import Linear
 import Collision.GJKInternal.Util
-import qualified Debug.Trace as Tr
 
--- delay :: (Monad m, TimeDomain td, Diff td ~ Double) => a -> BehaviourF m td a b
--- delay a = proc b -> do
---   _ <- iPre True
---   returnA -< b
+checkCollisions :: (RealFloat a) => Y.SF ((V2 a, V2 a, a), (V2 a, V2 a, a)) Bool
+checkCollisions =
+  B.switch
+    checkCollisionsEvent
+    ( \a ->
+        Tr.trace
+          ("Player dead!!: Here: " ++ show a)
+          constant
+          False
+    )
 
--- delay :: (Monad m, TimeDomain td, Diff td ~ Double) => a -> BehaviourF m td a a
--- delay = iPre
-
-myDelay :: (RealFloat a, Monad m, TimeDomain td, Diff td ~ Double) => BehaviourF (ExceptT () m) td ((V2 a, V2 a, a), (V2 a, V2 a, a)) Bool
-myDelay = proc b -> do
-  a <- iPre False -< True
-  throwOn () -< a
-  returnA -< False
-
-waiting :: (Monad m, TimeDomain td, Diff td ~ Double) => BehaviourF (ExceptT Bool m) td ((V2 a, V2 a, a), (V2 a, V2 a, a)) Bool
-waiting =  arr (const True)
-
-checkCollisions :: (RealFloat a, Monad m, TimeDomain td, Diff td ~ Double) => BehaviourFExcept m td ((V2 a, V2 a, a), (V2 a, V2 a, a)) Bool void
-checkCollisions = do
-  -- _ <- (delay (((V2 7 7),(V2 7 7),3),((V2 7 7),(V2 7 7),3)) >>> arr (const False))
-
-  -- try myDelay
-  todo <- try checkCollisionsEvent
-  -- try myDelay
-  _ <- try waiting
-  checkCollisions
-
-checkCollisionsEvent :: (RealFloat a, Monad m, TimeDomain td, Diff td ~ Double) => BehaviourF (ExceptT () m) td ((V2 a, V2 a, a), (V2 a, V2 a, a)) Bool
-checkCollisionsEvent = proc (a, b) -> do
-  -- throwS True -< True
-  throwOn () -< if collides a b == Just True then True else False
-  returnA -< False
+checkCollisionsEvent :: (RealFloat a) => Y.SF ((V2 a, V2 a, a), (V2 a, V2 a, a)) (Bool, Y.Event ())
+checkCollisionsEvent = proc (a, b) ->
+  returnA -< case collides a b of
+    Just True -> (False, Y.Event ())
+    Just False -> (True, Y.NoEvent)
+    Nothing -> (True, Y.NoEvent)
 
 collides :: (RealFloat a) => (V2 a, V2 a, a) -> (V2 a, V2 a, a) -> Maybe Bool
 collides (pos, size, rot) (pos', size', rot') =
