@@ -5,7 +5,6 @@ module Types where
 import Control.Lens
 import Linear
 import qualified Sprite as SP
-import YampaUtils.Types ()
 
 -- newtype Size = Size (V2 Double)
 

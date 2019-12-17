@@ -6,6 +6,8 @@ let
   tools = [
   ];
   libraries = [
+    cabal-install
+    ghc
     SDL2
     SDL2_image
     pkg-config

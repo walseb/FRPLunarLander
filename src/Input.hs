@@ -8,6 +8,7 @@ import Control.Monad ((>=>))
 import Data.Maybe
 import Foreign.C.Types (CInt)
 import SDL
+import qualified Debug.Trace as Tr
 
 data KeyState
   = KeyState
