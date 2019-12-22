@@ -1,5 +1,6 @@
 module Collision.AABB
-  ( collisionAABBCheck )
+  ( collisionAABBCheck,
+  )
 where
 
 import Linear

@@ -1,12 +1,12 @@
 module Collision.GJKInternal.Debug where
 
-import Foreign.C.Types
 import Collision.GJKInternal.Util
+import Control.Lens
+import Foreign.C.Types
 import Linear
 import qualified SDL.Vect as SV
 import qualified Sprite as SP
 import Types
-import Control.Lens
 
 debugRenderHitbox sprite pos size rot =
   let test = (toPt pos size rot)

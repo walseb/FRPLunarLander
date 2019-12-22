@@ -7,8 +7,6 @@ import Linear
 import qualified Sprite as SP
 import YampaUtils.Types ()
 
--- newtype Size = Size (V2 Double)
-
 data Object
   = Object
       { _pos :: V2 Double,
@@ -22,7 +20,8 @@ makeLenses ''Object
 data Resources
   = Resources
       { _objectSprite :: SP.Sprite,
-        _objectSprite2 :: SP.Sprite
+        _objectSprite2 :: SP.Sprite,
+        _scene :: SP.Sprite
       }
 
 makeLenses ''Resources
@@ -35,9 +34,16 @@ data Objects
 
 makeLenses ''Objects
 
+data CameraState
+  = CameraState
+      { _zoomLevel :: Double
+      }
+
 data GameState
   = GameState
-      { _objects :: Objects
+      {
+        _cameraState :: CameraState,
+        _objects :: Objects
       }
 
 makeLenses ''GameState

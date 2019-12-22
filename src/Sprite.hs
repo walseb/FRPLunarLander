@@ -1,3 +1,6 @@
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 module Sprite where
 
 import Control.Exception
@@ -6,6 +9,7 @@ import Foreign.C.Types
 import qualified SDL.Image
 import SDL.Vect
 import SDL.Video.Renderer
+import Control.Applicative
 
 -- | A loaded sprite.
 data Sprite = Sprite
@@ -71,13 +75,30 @@ render s xy sourceRect destSize =
 -- centerRot is the center to rotate around
 -- Flip is weather or not to flip the sprite on x and y axis
 renderEx :: MonadIO m => Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
-renderEx s xy sourceRect destSize rot centerRot flip =
+renderEx s xy sourceRect destSize rot =
   copyEx
     (spriteRenderer s)
     (spriteTexture s)
     sourceRect
     (Just (Rectangle (P xy) destSize))
     (-rot)
-    centerRot
-    flip
 {-# INLINE renderEx #-}
+
+-- Render ex except with distortions based on zoom level and whatever
+renderEx' :: MonadIO m => V2 CInt -> V2 CInt -> Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
+renderEx' deltaPos zoomLevel s xy sourceRect destSize rot centerRot =
+  renderEx
+    s
+    ((xy + deltaPos) `v2Div` zoomLevel)
+    sourceRect
+    (destSize `v2Div` zoomLevel)
+    rot
+    centerRot'
+    where
+      centerRot' = case centerRot of
+                    Just (P a) -> Just $ P $ a `v2Div` zoomLevel
+                    Nothing -> Nothing
+{-# INLINE renderEx' #-}
+
+v2Div :: (Integral a) => V2 a -> V2 a -> V2 a
+v2Div a b = liftA2 div a b

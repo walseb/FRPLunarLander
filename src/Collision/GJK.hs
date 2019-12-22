@@ -1,21 +1,21 @@
 {-# LANGUAGE Arrows #-}
 
 module Collision.GJK
-  ( checkCollisions )
+  ( checkCollisions,
+  )
 where
 
 import Collision.GJKInternal.Support
+import Collision.GJKInternal.Util
 import qualified Debug.Trace as Tr
-import FRP.BearRiver as B
-import FRP.Yampa as Y
+import FRP.Yampa
 import GJK.Collision
 import GJK.Mink (Mink)
 import Linear
-import Collision.GJKInternal.Util
 
-checkCollisions :: (RealFloat a) => Y.SF ((V2 a, V2 a, a), (V2 a, V2 a, a)) Bool
+checkCollisions :: (RealFloat a) => SF ((V2 a, V2 a, a), (V2 a, V2 a, a)) Bool
 checkCollisions =
-  B.switch
+  switch
     checkCollisionsEvent
     ( \a ->
         Tr.trace
@@ -24,12 +24,12 @@ checkCollisions =
           False
     )
 
-checkCollisionsEvent :: (RealFloat a) => Y.SF ((V2 a, V2 a, a), (V2 a, V2 a, a)) (Bool, Y.Event ())
+checkCollisionsEvent :: (RealFloat a) => SF ((V2 a, V2 a, a), (V2 a, V2 a, a)) (Bool, Event ())
 checkCollisionsEvent = proc (a, b) ->
   returnA -< case collides a b of
-    Just True -> (False, Y.Event ())
-    Just False -> (True, Y.NoEvent)
-    Nothing -> (True, Y.NoEvent)
+    Just True -> (False, Event ())
+    Just False -> (True, NoEvent)
+    Nothing -> (True, NoEvent)
 
 collides :: (RealFloat a) => (V2 a, V2 a, a) -> (V2 a, V2 a, a) -> Maybe Bool
 collides (pos, size, rot) (pos', size', rot') =
@@ -37,11 +37,7 @@ collides (pos, size, rot) (pos', size', rot') =
    in case test of
         Just True ->
           Tr.trace
-            ("Collision 1: " ++ show (toPt pos size rot))
-            Tr.trace
-            ("Collision 2: " ++ show (toPt pos' size' rot'))
-            Tr.trace
-            ("Just one last check to collision: " ++ show (collision 5 (toPt pos size rot, polySupport') (toPt pos' size' rot', polySupport')))
+            ("Collision at object with position:\n" ++ show (toPt pos size rot) ++ "\nand:\n" ++ show (toPt pos' size' rot'))
             Just
             True
         _ -> test
