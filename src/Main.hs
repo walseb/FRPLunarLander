@@ -14,6 +14,7 @@ import Control.Concurrent
   )
 import Control.Lens
 import Data.Coerce
+import Data.Maybe
 import Data.String (fromString)
 import Enemy (enemyMovement)
 import FRP.Yampa
@@ -32,26 +33,45 @@ initialGame =
     (CameraState 1)
     ( Objects
         (Object (V2 1000 0) (V2 500 500) 0 True)
-        [(Object (V2 1000 1200) (V2 500 500) 0 True)]
+        [(Object (V2 0 1200) (V2 500 500) 0 True)]
     )
+
+vectorizeMovement :: (RealFloat a) => DirectionalInput -> V2 a
+vectorizeMovement
+  ( DirectionalInput
+      (ButtonState _ a0)
+      (ButtonState _ a1)
+      (ButtonState _ a2)
+      (ButtonState _ a3)
+    ) =
+    V2
+      -- Horizontal
+      (boolToInt a3 - boolToInt a2)
+      -- Vertical
+      (boolToInt a1 - boolToInt a0)
+    where
+      boolToInt :: (RealFloat a) => Bool -> a
+      boolToInt a = if a then 0 else 1
+vectorizeMovement _ = error "Trying to vectorize unsupported input"
 
 applyInputs :: GameState -> SF InputState GameState
 applyInputs initialGameState = proc input -> do
   -- Calculate new pos without modifying state
-  (rot, playerPos) <- shipControl (initialGameState ^. (objects . player . pos)) 0 -< (input ^. movement)
+  (rot, playerPos) <- shipControl (initialGameState ^. (objects . player . pos)) 0 -< vectorizeMovement (input ^. movement)
   let playerSize = initialGameState ^. (objects . player . size)
   enemyPos <- enemyMovement (initialGameState ^. (objects . enemies . to head . pos)) -< (V2 0 (-1))
   let enemySize = initialGameState ^. (objects . enemies . to head . size)
   isPlayerAlive <- checkCollisions -< ((playerPos, playerSize, rot), (enemyPos, enemySize, 0))
   returnA -<
-    (
-      GameState
-        (CameraState 2)
-        (Objects
-          -- Player
-          (Object playerPos playerSize rot isPlayerAlive)
-          -- Enemies
-          [(Object enemyPos enemySize 0 True)])
+    ( ( GameState
+          (CameraState (fromMaybe 2 ((input ^. Input.zoom) ^? zoomLevel)))
+          ( Objects
+              -- Player
+              (Object playerPos playerSize rot isPlayerAlive)
+              -- Enemies
+              [(Object enemyPos enemySize 0 True)]
+          )
+      )
     )
 
 update :: GameState -> SF (Event [S.Event]) (GameState, Bool)
@@ -60,7 +80,7 @@ update origGameState = proc events -> do
   gameState <- applyInputs origGameState -< newInputState
   returnA -<
     ( gameState,
-      newInputState ^. (Input.quit . pressed)
+      fromJust (newInputState ^. quit ^? pressed)
     )
 
 screenSize = V2 2560 1440
@@ -70,8 +90,8 @@ render renderer (Resources sprite sprite2 scene) (GameState (CameraState zoomLev
   do
     S.rendererDrawColor renderer S.$= S.V4 0 0 100 255
     S.clear renderer
-    let screenMiddle = (screenSize / 2 * pure zoomLevel)
-    let dist = (screenMiddle - (player ^. pos)) - ((player ^. size) / 2)
+    let screenMiddle = screenSize / 2 * pure zoomLevel
+    let dist = screenMiddle - (player ^. pos) - ((player ^. size) / 2)
     let rendSpr = SP.renderEx' (fmap floor dist) (fmap floor (pure zoomLevel))
     case player ^. alive of
       True ->

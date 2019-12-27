@@ -5,7 +5,6 @@ module Ship where
 import Collision.GJKInternal.Util (moveAlongAxis)
 import Control.Lens
 import FRP.Yampa
-import Input
 import Linear
 import Physics
 import YampaUtils.Types ()
@@ -19,20 +18,17 @@ shipMovement initPos initVelocity = proc (thrusterPressed, rot) -> do
   pos <- integralFrom initPos -< vel
   returnA -< pos
 
-shipControl :: (RealFloat a) => V2 a -> V2 a -> SF DirectionalInput (a, V2 a)
+shipControl :: (RealFloat a) => V2 a -> V2 a -> SF (V2 a) (a, V2 a)
 shipControl initPos initVel = proc inputDir -> do
-  let movement2 = inputDir ^. (up . pressed)
-  rot <- shipRotationSwitch 0 -< (inputDir ^. (Input.left . pressed), inputDir ^. (Input.right . pressed))
+  let movement2 = (inputDir ^. _y) > 0
+  rot <- shipRotationSwitch 0 -< realToFrac $ inputDir ^. _x
   -- TODO fix this conversion
   pos <- shipMovement initPos initVel -< (movement2, realToFrac rot)
   returnA -< (realToFrac rot, pos)
 
-shipRotationSwitch :: Double -> SF (Bool, Bool) Double
-shipRotationSwitch initRot = proc (left, right) -> do
+shipRotationSwitch :: Double -> SF Double Double
+shipRotationSwitch initRot = proc turn -> do
   -- Stop moving or something if a collision is detected
-  rot <- integralFrom initRot -< (boolToInt right - boolToInt left) * 100
+  rot <- integralFrom initRot -< turn * 100
   -- rot <- integralFrom initRot -< rotVel
   returnA -< rot
-  where
-    boolToInt :: Bool -> Double
-    boolToInt a = if a then 0 else 1

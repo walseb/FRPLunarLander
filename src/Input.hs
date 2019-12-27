@@ -6,24 +6,16 @@ module Input where
 import Control.Lens
 import Control.Monad ((>=>))
 import Data.Maybe
-import Foreign.C.Types (CInt)
 import SDL
 
 data KeyState
-  = KeyState
-      { _key :: Keycode,
-        _pressed :: Bool
-      }
+  = ButtonState {_key :: Keycode, _pressed :: Bool}
+  | ScrollState {_zoomLevel :: Double}
   deriving (Show)
+
+makePrisms ''KeyState
 
 makeLenses ''KeyState
-
-data ZoomInput
-  = ZoomInput
-      { _zoomIn :: KeyState,
-        _zoomOut :: KeyState
-      }
-  deriving (Show)
 
 data DirectionalInput
   = DirectionalInput
@@ -38,7 +30,7 @@ makeLenses ''DirectionalInput
 
 data InputState
   = InputState
-      { _zoom :: ZoomInput,
+      { _zoom :: KeyState,
         _movement :: DirectionalInput,
         _quit :: KeyState
       }
@@ -47,76 +39,55 @@ data InputState
 makeLenses ''InputState
 
 keybinds = InputState
-  {
-    _zoom =
-      ZoomInput
-        (KeyState KeycodeM False)
-        (KeyState KeycodeM False),
+  { _zoom =
+      (ScrollState 20),
     _movement =
       DirectionalInput
-        (KeyState KeycodeM False)
-        (KeyState KeycodeT False)
-        (KeyState KeycodeS False)
-        (KeyState KeycodeN False),
-    _quit = KeyState KeycodeQ False
+        (ButtonState KeycodeM False)
+        (ButtonState KeycodeT False)
+        (ButtonState KeycodeS False)
+        (ButtonState KeycodeN False),
+    _quit = ButtonState KeycodeQ False
   }
 
-vectorizeMovement :: InputState -> V2 CInt
-vectorizeMovement
-  ( InputState
-      _
-      -- Movement keys
-      ( DirectionalInput
-          (KeyState _ a0)
-          (KeyState _ a1)
-          (KeyState _ a2)
-          (KeyState _ a3)
-        )
-      _
-    ) =
-    V2
-      -- Horizontal
-      (boolToInt a2 - boolToInt a3)
-      -- Vertical
-      (boolToInt a0 - boolToInt a1)
-    where
-      boolToInt :: Bool -> CInt
-      boolToInt a = if a then 0 else 1
-
 translateEventPayload :: EventPayload -> Maybe KeyState
-translateEventPayload (KeyboardEvent (KeyboardEventData _ Pressed _ keysym)) =
-  Just (KeyState (keysymKeycode keysym) True)
-translateEventPayload (KeyboardEvent (KeyboardEventData _ Released _ keysym)) =
-  Just (KeyState (keysymKeycode keysym) False)
+translateEventPayload (KeyboardEvent (KeyboardEventData _ Pressed _ keysym)) = Just (ButtonState (keysymKeycode keysym) True)
+translateEventPayload (KeyboardEvent (KeyboardEventData _ Released _ keysym)) = Just (ButtonState (keysymKeycode keysym) False)
+translateEventPayload (MouseWheelEvent (MouseWheelEventData _ _ scrollDist ScrollNormal)) = Just (ScrollState (fromIntegral (scrollDist ^. _y)))
+translateEventPayload (MouseWheelEvent (MouseWheelEventData _ _ scrollDist ScrollFlipped)) = Just (ScrollState (- (fromIntegral (scrollDist ^. _y))))
 translateEventPayload _ = Nothing
 
 inputStateUpdate :: InputState -> [SDL.Event] -> InputState
 inputStateUpdate =
-  foldr $ \inpEv oldState ->
+  foldr $ \inputEvent oldState ->
     fromMaybe oldState $
       (>=>)
         (translateEventPayload . eventPayload)
         (pure . updateKeyInInputState oldState)
-        inpEv
+        inputEvent
 
 -- So this is badly named, it just checks if the keys are identical then returns the old or then new state
+-- First key state is the initial key. The second is the updated/new key
 replaceKeystate :: KeyState -> KeyState -> KeyState
-replaceKeystate a0@(KeyState k0 _) a1@(KeyState k1 _) =
-  if k0 == k1 then a0 else a1
+replaceKeystate a0@(ButtonState k0 _) a1@(ButtonState k1 _) = if k0 == k1 then a0 else a1
+replaceKeystate (ScrollState newZoom) (ScrollState oldZoom) =
+  if (oldZoom + newZoom') > 0
+    then ScrollState (oldZoom + newZoom')
+    else ScrollState oldZoom
+  where newZoom' = -newZoom
+-- If keys aren't matched don't do anything
+replaceKeystate _ a = a
 
 updateKeyInInputState :: InputState -> KeyState -> InputState
-updateKeyInInputState (InputState (ZoomInput b0 b1) (DirectionalInput b2 b3 b4 b5) bQuit) key =
+updateKeyInInputState (InputState zoomLevel (DirectionalInput b2 b3 b4 b5) bQuit) key =
   InputState
-    ( ZoomInput
-        (keyCheck b0)
-        (keyCheck b1)
-    )
+    (replaceKeystate' zoomLevel)
     ( DirectionalInput
-        (keyCheck b2)
-        (keyCheck b3)
-        (keyCheck b4)
-        (keyCheck b5)
+        (replaceKeystate' b2)
+        (replaceKeystate' b3)
+        (replaceKeystate' b4)
+        (replaceKeystate' b5)
     )
-    (keyCheck bQuit)
+    (replaceKeystate' bQuit)
   where
-    keyCheck = replaceKeystate key
+    replaceKeystate' = replaceKeystate key
