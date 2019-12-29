@@ -27,13 +27,15 @@ import Ship (shipControl)
 import qualified Sprite as SP
 import Types
 import YampaUtils.Types ()
+import Collision.GJKInternal.Util (toPt)
 
 initialGame =
   GameState
     (CameraState 1)
     ( Objects
-        (Object (V2 1000 0) (V2 500 500) 0 True)
-        [(Object (V2 0 1200) (V2 500 500) 0 True)]
+        (Living True (Object (V2 1000 0) (V2 500 500) 0))
+        [(Living True (Object (V2 0 1200) (V2 500 500) 0))]
+    [(Terrain [] (Object (V2 1000 0) (V2 500 500) 0))]
     )
 
 vectorizeMovement :: (RealFloat a) => DirectionalInput -> V2 a
@@ -57,22 +59,22 @@ vectorizeMovement _ = error "Trying to vectorize unsupported input"
 applyInputs :: GameState -> SF InputState GameState
 applyInputs initialGameState = proc input -> do
   -- Calculate new pos without modifying state
-  (rot, playerPos) <- shipControl (initialGameState ^. (objects . player . pos)) 0 -< vectorizeMovement (input ^. movement)
-  let playerSize = initialGameState ^. (objects . player . size)
-  enemyPos <- enemyMovement (initialGameState ^. (objects . enemies . to head . pos)) -< (V2 0 (-1))
-  let enemySize = initialGameState ^. (objects . enemies . to head . size)
-  isPlayerAlive <- checkCollisions -< ((playerPos, playerSize, rot), (enemyPos, enemySize, 0))
+  (rot, playerPos) <- shipControl (initialGameState ^. (objects . player . lObject . pos)) 0 -< vectorizeMovement (input ^. movement)
+  let playerSize = initialGameState ^. (objects . player . lObject . size)
+  enemyPos <- enemyMovement (initialGameState ^. (objects . enemies . to head . lObject . pos)) -< (V2 0 (-1))
+  let enemySize = initialGameState ^. (objects . enemies . to head . lObject . size)
+  isPlayerAlive <- checkCollisions -< (toPt playerPos playerSize rot, [(toPt enemyPos enemySize 0)])
   returnA -<
-    ( ( GameState
+     ( GameState
           (CameraState (fromMaybe 2 ((input ^. Input.zoom) ^? zoomLevel)))
           ( Objects
               -- Player
               (Object playerPos playerSize rot isPlayerAlive)
               -- Enemies
               [(Object enemyPos enemySize 0 True)]
+
           )
       )
-    )
 
 update :: GameState -> SF (Event [S.Event]) (GameState, Bool)
 update origGameState = proc events -> do

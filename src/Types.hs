@@ -6,16 +6,32 @@ import Control.Lens
 import Linear
 import qualified Sprite as SP
 import YampaUtils.Types ()
+import Collision.GJKInternal.Support
 
 data Object
   = Object
       { _pos :: V2 Double,
         _size :: V2 Double,
-        _rot :: Double,
-        _alive :: Bool
+        _rot :: Double
       }
 
 makeLenses ''Object
+
+data Terrain
+  = Terrain
+      { _collision :: [[Pt']],
+        _tObject :: Object
+      }
+
+makeLenses ''Terrain
+
+data Living
+  = Living
+      { _alive :: Bool,
+        _lObject :: Object
+      }
+
+makeLenses ''Living
 
 data Resources
   = Resources
@@ -28,8 +44,9 @@ makeLenses ''Resources
 
 data Objects
   = Objects
-      { _player :: Object,
-        _enemies :: [Object]
+      { _player :: Living,
+        _enemies :: [Living],
+        _terrain :: [Terrain]
       }
 
 makeLenses ''Objects

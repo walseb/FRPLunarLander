@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE Arrows #-}
 
 module Collision.GJK
@@ -6,14 +8,11 @@ module Collision.GJK
 where
 
 import Collision.GJKInternal.Support
-import Collision.GJKInternal.Util
 import qualified Debug.Trace as Tr
 import FRP.Yampa
 import GJK.Collision
-import GJK.Mink (Mink)
-import Linear
 
-checkCollisions :: (RealFloat a) => SF ((V2 a, V2 a, a), (V2 a, V2 a, a)) Bool
+checkCollisions :: SF ([Pt'], [[Pt']]) Bool
 checkCollisions =
   switch
     checkCollisionsEvent
@@ -24,23 +23,18 @@ checkCollisions =
           False
     )
 
-checkCollisionsEvent :: (RealFloat a) => SF ((V2 a, V2 a, a), (V2 a, V2 a, a)) (Bool, Event ())
+checkCollisionsEvent :: SF ([Pt'], [[Pt']]) (Bool, Event ())
 checkCollisionsEvent = proc (a, b) ->
   returnA -< case collides a b of
-    Just True -> (False, Event ())
-    Just False -> (True, NoEvent)
-    Nothing -> (True, NoEvent)
+    True -> (False, Event ())
+    False -> (True, NoEvent)
 
-collides :: (RealFloat a) => (V2 a, V2 a, a) -> (V2 a, V2 a, a) -> Maybe Bool
-collides (pos, size, rot) (pos', size', rot') =
-  let test = collision 5 a b
-   in case test of
-        Just True ->
-          Tr.trace
-            ("Collision at object with position:\n" ++ show (toPt pos size rot) ++ "\nand:\n" ++ show (toPt pos' size' rot'))
-            Just
-            True
-        _ -> test
-  where
-    a = (toPt pos size rot, polySupport') :: Mink [Pt']
-    b = (toPt pos' size' rot', polySupport') :: Mink [Pt']
+collides :: [[Pt']] -> [[Pt']] -> Bool
+collides pts pts' =
+  collision 5 (pts, polySupport') -- ((, polySupport') <$> pts')
+  -- mapThing $ collision 5 (pts, polySupport') . (, polySupport') <$> pts'
+
+mapThing :: [Maybe Bool] -> Bool
+mapThing (Just True:_) = True
+mapThing (_:as) = mapThing as
+mapThing [] = False
