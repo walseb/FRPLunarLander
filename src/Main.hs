@@ -32,7 +32,7 @@ import Collision.GJKInternal.Util (toPt)
 initialGame =
   GameState
     (CameraState 1)
-    ( Objects
+    ( PhysicalState
         (Living True (Object (V2 1000 0) (V2 500 500) 0))
         [(Living True (Object (V2 0 1200) (V2 500 500) 0))]
     [(Terrain [] (Object (V2 1000 0) (V2 500 500) 0))]
@@ -59,20 +59,20 @@ vectorizeMovement _ = error "Trying to vectorize unsupported input"
 applyInputs :: GameState -> SF InputState GameState
 applyInputs initialGameState = proc input -> do
   -- Calculate new pos without modifying state
-  (rot, playerPos) <- shipControl (initialGameState ^. (objects . player . lObject . pos)) 0 -< vectorizeMovement (input ^. movement)
-  let playerSize = initialGameState ^. (objects . player . lObject . size)
-  enemyPos <- enemyMovement (initialGameState ^. (objects . enemies . to head . lObject . pos)) -< (V2 0 (-1))
-  let enemySize = initialGameState ^. (objects . enemies . to head . lObject . size)
-  isPlayerAlive <- checkCollisions -< (toPt playerPos playerSize rot, [(toPt enemyPos enemySize 0)])
+  (rot, playerPos) <- shipControl (initialGameState ^. (physicalState . player . lObject . pos)) 0 -< vectorizeMovement (input ^. movement)
+  let playerSize = initialGameState ^. (physicalState . player . lObject . size)
+  enemyPos <- enemyMovement (initialGameState ^. (physicalState . enemies . to head . lObject . pos)) -< (V2 0 (-1))
+  let enemySize = initialGameState ^. (physicalState . enemies . to head . lObject . size)
+  isPlayerAlive <- checkCollisions -< ([toPt playerPos playerSize rot], [(toPt enemyPos enemySize 0)])
   returnA -<
-     ( GameState
+     (GameState
           (CameraState (fromMaybe 2 ((input ^. Input.zoom) ^? zoomLevel)))
-          ( Objects
+          (PhysicalState
               -- Player
-              (Object playerPos playerSize rot isPlayerAlive)
+              (Living isPlayerAlive (Object playerPos playerSize rot))
               -- Enemies
-              [(Object enemyPos enemySize 0 True)]
-
+              [(Living True (Object enemyPos enemySize 0))]
+              [(Terrain [[(V2 7 7)]] (Object playerPos playerSize rot))]
           )
       )
 
@@ -85,41 +85,42 @@ update origGameState = proc events -> do
       fromJust (newInputState ^. quit ^? pressed)
     )
 
-screenSize = V2 2560 1440
+-- screenSize = V2 2560 1440
+screenSize = V2 1280 720
 
 render :: S.Renderer -> Resources -> (GameState, Bool) -> IO Bool
-render renderer (Resources sprite sprite2 scene) (GameState (CameraState zoomLevel) (Objects player objects), exit) =
+render renderer (Resources sprite sprite2 scene) (GameState (CameraState zoomLevel) (PhysicalState player objects terrain), exit) =
   do
     S.rendererDrawColor renderer S.$= S.V4 0 0 100 255
     S.clear renderer
     let screenMiddle = screenSize / 2 * pure zoomLevel
-    let dist = screenMiddle - (player ^. pos) - ((player ^. size) / 2)
+    let dist = screenMiddle - (player ^. (lObject . pos)) - ((player ^. (lObject . size)) / 2)
     let rendSpr = SP.renderEx' (fmap floor dist) (fmap floor (pure zoomLevel))
     case player ^. alive of
       True ->
         rendSpr
           sprite
-          (fmap floor (player ^. pos))
+          (fmap floor (player ^. (lObject . pos)))
           Nothing
           (V2 500 500)
-          (coerce (player ^. rot))
-          (Just (SV.P (fmap floor ((player ^. size) / 2))))
+          (coerce (player ^. (lObject . rot)))
+          (Just (SV.P (fmap floor ((player ^. (lObject . size)) / 2))))
           (V2 False False)
       False ->
         pure ()
     rendSpr
       sprite
-      (floor <$> (objects ^. (to head . pos)))
+      (floor <$> (objects ^. (to head . lObject . pos)))
       Nothing
       (V2 500 500)
-      (coerce (objects ^. (to head . rot)))
-      (Just (SV.P (fmap floor ((objects ^. (to head . size)) / 2))))
+      (coerce (objects ^. (to head . lObject . rot)))
+      (Just (SV.P (fmap floor ((objects ^. (to head . lObject . size)) / 2))))
       (V2 False False)
     rendSpr
       scene
       (V2 1000 50)
       Nothing
-      (V2 5000 5000)
+      ((V2 1920 1080) * 10)
       0
       (Just (SV.P 0))
       (V2 False False)
@@ -133,7 +134,7 @@ spritePath2 :: FilePath
 spritePath2 = "data/testSprite2.png"
 
 scenePath :: FilePath
-scenePath = "data/testScene.png"
+scenePath = "data/testTerrian.png"
 
 main :: IO ()
 main = do

@@ -42,14 +42,14 @@ data Resources
 
 makeLenses ''Resources
 
-data Objects
-  = Objects
+data PhysicalState
+  = PhysicalState
       { _player :: Living,
         _enemies :: [Living],
         _terrain :: [Terrain]
       }
 
-makeLenses ''Objects
+makeLenses ''PhysicalState
 
 data CameraState
   = CameraState
@@ -60,7 +60,7 @@ data GameState
   = GameState
       {
         _cameraState :: CameraState,
-        _objects :: Objects
+        _PhysicalState :: PhysicalState
       }
 
 makeLenses ''GameState

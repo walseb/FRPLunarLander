@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE Arrows #-}
 
 module Collision.GJK
@@ -11,8 +9,9 @@ import Collision.GJKInternal.Support
 import qualified Debug.Trace as Tr
 import FRP.Yampa
 import GJK.Collision
+import Control.Applicative
 
-checkCollisions :: SF ([Pt'], [[Pt']]) Bool
+checkCollisions :: SF ([[Pt']], [[Pt']]) Bool
 checkCollisions =
   switch
     checkCollisionsEvent
@@ -23,7 +22,7 @@ checkCollisions =
           False
     )
 
-checkCollisionsEvent :: SF ([Pt'], [[Pt']]) (Bool, Event ())
+checkCollisionsEvent :: SF ([[Pt']], [[Pt']]) (Bool, Event ())
 checkCollisionsEvent = proc (a, b) ->
   returnA -< case collides a b of
     True -> (False, Event ())
@@ -31,10 +30,12 @@ checkCollisionsEvent = proc (a, b) ->
 
 collides :: [[Pt']] -> [[Pt']] -> Bool
 collides pts pts' =
-  collision 5 (pts, polySupport') -- ((, polySupport') <$> pts')
-  -- mapThing $ collision 5 (pts, polySupport') . (, polySupport') <$> pts'
+  mapThing $ liftA2 collision' pts pts'
+  where
+    mapThing :: [Maybe Bool] -> Bool
+    mapThing (Just True:_) = True
+    mapThing (_:as) = mapThing as
+    mapThing [] = False
 
-mapThing :: [Maybe Bool] -> Bool
-mapThing (Just True:_) = True
-mapThing (_:as) = mapThing as
-mapThing [] = False
+collision' :: [Pt'] -> [Pt'] -> Maybe Bool
+collision' pts pts' = collision 5 (pts, polySupport') (pts', polySupport')

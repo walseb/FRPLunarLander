@@ -76,7 +76,8 @@ replaceKeystate (ScrollState newZoom) (ScrollState oldZoom) =
     else ScrollState oldZoom
   where newZoom' = -newZoom
 -- If keys aren't matched don't do anything
-replaceKeystate _ a = a
+replaceKeystate _ a@(ButtonState _ _) = a
+replaceKeystate _ a@(ScrollState _) = a
 
 updateKeyInInputState :: InputState -> KeyState -> InputState
 updateKeyInInputState (InputState zoomLevel (DirectionalInput b2 b3 b4 b5) bQuit) key =
