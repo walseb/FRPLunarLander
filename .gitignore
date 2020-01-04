@@ -11,6 +11,7 @@
 !ReactiveGame.cabal
 !Setup.hs
 !/src/
+!/data/
 !testSprite.png
 !guide
 
