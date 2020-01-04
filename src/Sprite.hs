@@ -28,9 +28,9 @@ data Sprite = Sprite
 
 -- | Get the current source rectangle of the sprite's frame.
 -- spriteRectangle :: Sprite -> Rectangle CInt
--- spriteRectangle s = Rectangle (P (V2 x 0)) (V2 w h)
---   where (V2 w h) = spriteDimensions s
---         x = spriteFrame s * w
+-- spriteRectangle spr = Rectangle (P (V2 x 0)) (V2 w h)
+--   where (V2 w h) = spriteDimensions spr
+--         x = spriteFrame spr * w
 
 -- | Load a sprite from file.
 load :: MonadIO m => Renderer -> FilePath -> V2 CInt -> m Sprite
@@ -49,56 +49,57 @@ load ren fp dimensions =
 
 -- | Advance sprite to the next frame.
 animate :: Sprite -> CInt -> Sprite
-animate s sWidth =
-  s
+animate spr sWidth =
+  spr
   { spriteFrame =
-      if (spriteFrame s + 1) * sWidth < textureWidth (spriteTextureInfo s)
-        then spriteFrame s + 1
+      if (spriteFrame spr + 1) * sWidth < textureWidth (spriteTextureInfo spr)
+        then spriteFrame spr + 1
         else 0
   }
 {-# INLINE animate #-}
 
 -- | Render the sprite at the given coordinates.
 render :: MonadIO m => Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> m ()
-render s xy sourceRect destSize =
+render spr pos sourceRect destRect =
   copy
-    (spriteRenderer s)
-    (spriteTexture s)
+    (spriteRenderer spr)
+    (spriteTexture spr)
     sourceRect
-    (Just (Rectangle (P xy) destSize))
+    (Just (Rectangle (P pos) destRect))
 {-# INLINE render #-}
 
--- | Render the sprite at the given coordinates.
--- Here s is the sprite to be rendered
--- xy is the position of the sprite
--- rot is the rotation of sprite
--- centerRot is the center to rotate around
+-- Render the sprite at the given coordinates.
+-- Here spr is the sprite to be rendered
+-- pos is the position of the sprite
+-- theta is the rotation of sprite
+-- center is the center to rotate around
 -- Flip is weather or not to flip the sprite on x and y axis
+-- sourceRect is the source rectangle to copy, or 'Nothing' for the whole texture
+-- destRect is the destination rectangle to copy to, or 'Nothing' for the whole rendering target. The texture will be stretched to fill the given rectangle.
 renderEx :: MonadIO m => Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
-renderEx s xy sourceRect destSize rot =
+renderEx spr pos sourceRect destRect theta =
   copyEx
-    (spriteRenderer s)
-    (spriteTexture s)
+    (spriteRenderer spr)
+    (spriteTexture spr)
     sourceRect
-    (Just (Rectangle (P xy) destSize))
-    (-rot)
+    (Just (Rectangle (P pos) destRect))
+    (-theta)
 {-# INLINE renderEx #-}
 
 -- Render ex except with distortions based on zoom level and whatever
+-- deltaPos is the distance between the player and the camera. This means the distance everything needs to be moved by to put the camera at the correct position
 renderEx' :: MonadIO m => V2 CInt -> V2 CInt -> Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
-renderEx' deltaPos zoomLevel s xy sourceRect destSize rot centerRot =
+renderEx' deltaPos zoomLevel spr pos sourceRect destRect theta center =
   renderEx
-    s
-    ((xy + deltaPos) `v2Div` zoomLevel)
+    spr
+    ((pos + deltaPos) `v2Div` zoomLevel)
     sourceRect
-    (destSize `v2Div` zoomLevel)
-    rot
+    (destRect `v2Div` zoomLevel)
+    theta
     centerRot'
     where
-      centerRot' = case centerRot of
+      v2Div = liftA2 div
+      centerRot' = case center of
                     Just (P a) -> Just $ P $ a `v2Div` zoomLevel
                     Nothing -> Nothing
 {-# INLINE renderEx' #-}
-
-v2Div :: (Integral a) => V2 a -> V2 a -> V2 a
-v2Div a b = liftA2 div a b

@@ -27,15 +27,25 @@ import Ship (shipControl)
 import qualified Sprite as SP
 import Types
 import YampaUtils.Types ()
-import Collision.GJKInternal.Util (toPt)
+import Collision.GJKInternal.Util (toPt, ptsApplyObject)
+import Collision.GJKInternal.Debug
+import Control.Applicative
+import qualified Debug.Trace as Tr
 
 initialGame =
   GameState
     (CameraState 1)
-    ( PhysicalState
-        (Living True (Object (V2 1000 0) (V2 500 500) 0))
+    (PhysicalState
+        (Living True (Object (V2 1500 (-1000)) (V2 500 500) 90))
         [(Living True (Object (V2 0 1200) (V2 500 500) 0))]
-    [(Terrain [] (Object (V2 1000 0) (V2 500 500) 0))]
+    -- Here the points are relative to the object position. In game loop those gets turned into world position
+    [(Terrain
+      [[(V2 0 0), (V2 500 0), (V2 500 500), (V2 0 500)]]
+      (Object (V2 100 100) (V2 1 1) 0)),
+    (Terrain
+      [[(V2 0 0), (V2 900 0), (V2 900 900), (V2 0 900)]]
+      (Object (V2 0 0) (V2 1 1) 0))
+    ]
     )
 
 vectorizeMovement :: (RealFloat a) => DirectionalInput -> V2 a
@@ -56,23 +66,56 @@ vectorizeMovement
       boolToInt a = if a then 0 else 1
 vectorizeMovement _ = error "Trying to vectorize unsupported input"
 
+-- accumHoldBy
+zoomLevel :: Int -> KeyState -> Int
+zoomLevel zoom (ButtonAxisState _ (V2 True _)) = zoom + 1
+zoomLevel zoom (ButtonAxisState _ (V2 _ True)) = if zoom - 1 > 0 then zoom -1 else zoom
+zoomLevel zoom (ButtonAxisState _ _) = zoom
+zoomLevel zoom (ScrollState scrollDist) = if zoom + scrollDist > 0 then zoom + scrollDist else zoom
+
+--   (3 +
+--    3)
+-- test = (fmap (+1)[3,2,1])
+--   test
+-- test = (fmap
+--         ([[(V2 8 8), (V2 8 8)], [(V2 8 8), (V2 8 8)]] ++)
+--         [[[(V2 8 8), (V2 8 8)], [(V2 8 8), (V2 8 8)]],
+--          [[(V2 8 8), (V2 8 8)], [(V2 8 8), (V2 8 8)]]])
+
 applyInputs :: GameState -> SF InputState GameState
 applyInputs initialGameState = proc input -> do
+  -- TODO: Problem here is that it only checks for 1 terrain object
+  -- let terrainColl = initialGameState ^. (physicalState . terrain . to head . coll)
+
+  -- Problem here: It doesn't apply size
+  -- let terrainColl' = fmap
+  --                      ptsApplyObject
+  --                      (fmap (^. tObject) (initialGameState ^. (physicalState . terrain)))
+  --                    <*>
+  --                      fmap (^. coll)
+  --                      (initialGameState ^. (physicalState . terrain))
+
+  let terrains = (initialGameState ^. physicalState . terrain)
+  let terrainColl' = fmap (\terr -> ptsApplyObject (terr ^. tObject) (terr ^. coll)) terrains
+  let terrains' = (zipWith (\terr coll' -> (Terrain coll' (terr ^. tObject))) terrains terrainColl')
+
   -- Calculate new pos without modifying state
-  (rot, playerPos) <- shipControl (initialGameState ^. (physicalState . player . lObject . pos)) 0 -< vectorizeMovement (input ^. movement)
+  (rot, playerPos) <- shipControl (initialGameState ^. (physicalState . player . lObject . pos)) (initialGameState ^. (physicalState . player . lObject . rot)) 0 -< vectorizeMovement (input ^. movement)
   let playerSize = initialGameState ^. (physicalState . player . lObject . size)
   enemyPos <- enemyMovement (initialGameState ^. (physicalState . enemies . to head . lObject . pos)) -< (V2 0 (-1))
   let enemySize = initialGameState ^. (physicalState . enemies . to head . lObject . size)
-  isPlayerAlive <- checkCollisions -< ([toPt playerPos playerSize rot], [(toPt enemyPos enemySize 0)])
+  isPlayerAlive <- checkCollisions -< (Tr.trace ("original: " ++ show terrainColl' ++  "transformed: " ++ show (concat terrainColl'))) $ ([toPt playerPos playerSize rot], ([toPt enemyPos enemySize 0] ++) (concat terrainColl'))
+  zoomLevel <- accumHoldBy zoomLevel 3 -< Event (input ^. Input.zoom)
   returnA -<
      (GameState
-          (CameraState (fromMaybe 2 ((input ^. Input.zoom) ^? zoomLevel)))
+          (CameraState zoomLevel)
           (PhysicalState
               -- Player
               (Living isPlayerAlive (Object playerPos playerSize rot))
               -- Enemies
               [(Living True (Object enemyPos enemySize 0))]
-              [(Terrain [[(V2 7 7)]] (Object playerPos playerSize rot))]
+
+             terrains'
           )
       )
 
@@ -88,44 +131,59 @@ update origGameState = proc events -> do
 -- screenSize = V2 2560 1440
 screenSize = V2 1280 720
 
+test9 game sprite2 renderSpr pos = debugHitboxes (renderSpr sprite2 ((fmap floor (pos :: V2 Double)) :: V2 CInt) (V2 100 100)) game
+
 render :: S.Renderer -> Resources -> (GameState, Bool) -> IO Bool
-render renderer (Resources sprite sprite2 scene) (GameState (CameraState zoomLevel) (PhysicalState player objects terrain), exit) =
+render renderer (Resources sprite sprite2 scene) (game@(GameState (CameraState zoomLevel) (PhysicalState player objects terrain)), exit) =
   do
     S.rendererDrawColor renderer S.$= S.V4 0 0 100 255
     S.clear renderer
-    let screenMiddle = screenSize / 2 * pure zoomLevel
-    let dist = screenMiddle - (player ^. (lObject . pos)) - ((player ^. (lObject . size)) / 2)
-    let rendSpr = SP.renderEx' (fmap floor dist) (fmap floor (pure zoomLevel))
+    -- Tr.traceM ("Terrain points" ++ (join (join (fmap (\a -> fmap show (a ^. coll)) terrain))))
+
+    let renderDebug = \pos -> renderSpr sprite2 (fmap floor (pos :: V2 Double)) (V2 100 100) 0
+    -- Tr.traceM ("HERE! " ++ show terrain)
+    debugHitboxes renderDebug (objects ++ [player]) terrain
+
     case player ^. alive of
       True ->
-        rendSpr
+        renderSpr
           sprite
           (fmap floor (player ^. (lObject . pos)))
-          Nothing
-          (V2 500 500)
+          -- (V2 500 500)
+          (player ^. (lObject . size))
           (coerce (player ^. (lObject . rot)))
-          (Just (SV.P (fmap floor ((player ^. (lObject . size)) / 2))))
-          (V2 False False)
       False ->
         pure ()
-    rendSpr
+    renderSpr
       sprite
       (floor <$> (objects ^. (to head . lObject . pos)))
-      Nothing
-      (V2 500 500)
+      -- (V2 500 500)
+      (fmap coerce (objects ^. (to head . lObject . size)))
       (coerce (objects ^. (to head . lObject . rot)))
-      (Just (SV.P (fmap floor ((objects ^. (to head . lObject . size)) / 2))))
-      (V2 False False)
-    rendSpr
+    renderScene
       scene
       (V2 1000 50)
-      Nothing
       ((V2 1920 1080) * 10)
       0
-      (Just (SV.P 0))
-      (V2 False False)
     S.present renderer
     return exit
+    where
+      screenMiddle = screenSize / 2 * pure (fromIntegral zoomLevel)
+      dist = screenMiddle - (player ^. (lObject . pos)) - ((player ^. (lObject . size)) / 2)
+      render = (\center spr pos size theta ->
+                    SP.renderEx'
+                      (fmap floor dist)
+                      (fmap fromIntegral (pure zoomLevel))
+                      spr
+                      pos
+                      Nothing
+                      (fmap floor size)
+                      theta
+                      center
+                      (V2 False False))
+      renderSpr = \spr pos size rot -> render (Just (SV.P (fmap floor (size / 2)))) spr pos size rot
+      -- Static stuff center rot at top left
+      renderScene = render Nothing
 
 spritePath :: FilePath
 spritePath = "data/testSprite.png"

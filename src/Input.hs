@@ -4,13 +4,12 @@
 module Input where
 
 import Control.Lens
-import Control.Monad ((>=>))
-import Data.Maybe
 import SDL
 
 data KeyState
   = ButtonState {_key :: Keycode, _pressed :: Bool}
-  | ScrollState {_zoomLevel :: Double}
+  | ButtonAxisState {_keyVec :: V2 Keycode, _pressedVec :: V2 Bool}
+  | ScrollState {_scrollDist :: Int}
   deriving (Show)
 
 makePrisms ''KeyState
@@ -40,7 +39,8 @@ makeLenses ''InputState
 
 keybinds = InputState
   { _zoom =
-      (ScrollState 20),
+      -- (ScrollState 0),
+      (ButtonAxisState (V2 KeycodeB KeycodeO) (V2 False False)),
     _movement =
       DirectionalInput
         (ButtonState KeycodeM False)
@@ -50,39 +50,34 @@ keybinds = InputState
     _quit = ButtonState KeycodeQ False
   }
 
-translateEventPayload :: EventPayload -> Maybe KeyState
-translateEventPayload (KeyboardEvent (KeyboardEventData _ Pressed _ keysym)) = Just (ButtonState (keysymKeycode keysym) True)
-translateEventPayload (KeyboardEvent (KeyboardEventData _ Released _ keysym)) = Just (ButtonState (keysymKeycode keysym) False)
-translateEventPayload (MouseWheelEvent (MouseWheelEventData _ _ scrollDist ScrollNormal)) = Just (ScrollState (fromIntegral (scrollDist ^. _y)))
-translateEventPayload (MouseWheelEvent (MouseWheelEventData _ _ scrollDist ScrollFlipped)) = Just (ScrollState (- (fromIntegral (scrollDist ^. _y))))
-translateEventPayload _ = Nothing
-
 inputStateUpdate :: InputState -> [SDL.Event] -> InputState
-inputStateUpdate =
-  foldr $ \inputEvent oldState ->
-    fromMaybe oldState $
-      (>=>)
-        (translateEventPayload . eventPayload)
-        (pure . updateKeyInInputState oldState)
-        inputEvent
+inputStateUpdate = foldr (updateKeyInInputState . eventPayload)
 
--- So this is badly named, it just checks if the keys are identical then returns the old or then new state
--- First key state is the initial key. The second is the updated/new key
-replaceKeystate :: KeyState -> KeyState -> KeyState
-replaceKeystate a0@(ButtonState k0 _) a1@(ButtonState k1 _) = if k0 == k1 then a0 else a1
-replaceKeystate (ScrollState newZoom) (ScrollState oldZoom) =
-  if (oldZoom + newZoom') > 0
-    then ScrollState (oldZoom + newZoom')
-    else ScrollState oldZoom
-  where newZoom' = -newZoom
--- If keys aren't matched don't do anything
-replaceKeystate _ a@(ButtonState _ _) = a
-replaceKeystate _ a@(ScrollState _) = a
+fromMotion :: InputMotion -> Bool
+fromMotion Pressed = True
+fromMotion Released = False
 
-updateKeyInInputState :: InputState -> KeyState -> InputState
-updateKeyInInputState (InputState zoomLevel (DirectionalInput b2 b3 b4 b5) bQuit) key =
+replaceKeystate :: EventPayload -> KeyState -> KeyState
+-- ButtonState
+replaceKeystate (KeyboardEvent (KeyboardEventData _ pressed _ keysym)) a@(ButtonState key _) = if keysymKeycode keysym == key then ButtonState (keysymKeycode keysym) (fromMotion pressed) else a
+-- ButtonAxisState
+replaceKeystate
+  (KeyboardEvent (KeyboardEventData _ press0 _ keysym)) a@(ButtonAxisState key press)
+  | keysymKeycode keysym == (key ^. _x) = ButtonAxisState key (V2 (press ^. _x) (fromMotion press0))
+  | keysymKeycode keysym == (key ^. _y) = ButtonAxisState key (V2 (fromMotion press0) (press ^. _y))
+  | otherwise = a
+-- ScrollState
+replaceKeystate (MouseWheelEvent (MouseWheelEventData _ _ scrollDist ScrollNormal)) (ScrollState oldScrollDist) =
+  ScrollState (fromIntegral (scrollDist ^. _y))
+replaceKeystate (MouseWheelEvent (MouseWheelEventData _ _ scrollDist ScrollFlipped)) (ScrollState oldScrollDist) =
+  ScrollState (- (fromIntegral (scrollDist ^. _y)))
+-- If keys aren't matched or unknown don't do anything
+replaceKeystate _ a = a
+
+updateKeyInInputState ::   EventPayload -> InputState-> InputState
+updateKeyInInputState  event (InputState zoomLevelDelta (DirectionalInput b2 b3 b4 b5) bQuit) =
   InputState
-    (replaceKeystate' zoomLevel)
+    (replaceKeystate' zoomLevelDelta)
     ( DirectionalInput
         (replaceKeystate' b2)
         (replaceKeystate' b3)
@@ -91,4 +86,4 @@ updateKeyInInputState (InputState zoomLevel (DirectionalInput b2 b3 b4 b5) bQuit
     )
     (replaceKeystate' bQuit)
   where
-    replaceKeystate' = replaceKeystate key
+    replaceKeystate' = replaceKeystate event

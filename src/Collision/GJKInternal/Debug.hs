@@ -1,30 +1,36 @@
 module Collision.GJKInternal.Debug where
 
 import Collision.GJKInternal.Util
+import Collision.GJKInternal.Support
 import Control.Lens
 import Foreign.C.Types
 import Linear
-import qualified SDL.Vect as SV
 import qualified Sprite as SP
 import Types
+import Control.Monad
+import qualified Debug.Trace as Tr
 
-debugRenderHitbox sprite pos size rot =
-  let test = (toPt pos size rot)
-      test2 = fmap (\a -> fmap floor a) test
-   in mapM (debugRenderThing sprite (V2 20 20) 0) test2
+debugRenderHitbox :: (RealFloat a) => (V2 a -> IO ()) -> Object -> IO [()]
+debugRenderHitbox renderFunc obj =
+  let test = (toPt ((obj ^. pos) + ((obj ^. size) / 2)) (obj ^. size) (obj ^. rot))
+      test2 = fmap (\a -> fmap realToFrac a) test
+   in mapM renderFunc test2
 
-debugRenderThing :: SP.Sprite -> V2 CInt -> CDouble -> V2 CInt -> IO ()
-debugRenderThing sprite size rot newPosition =
-  SP.renderEx
-    sprite
-    newPosition
-    Nothing
-    size
-    rot
-    (Just (SV.P (V2 0 0)))
-    (V2 False False)
+  -- mapM (\terr' -> (fmap (\coll -> debugRenderThing renderFunc sprite  0) ((fmap . fmap) floor (concat (terr' ^. coll))))) terr
+   -- let test2 = fmap (\a -> fmap floor a) pts
+   -- in mapM (debugRenderThing renderFunc sprite (V2 100 100) 0) test2
 
-debugHitboxes :: GameState -> SP.Sprite -> IO [()]
-debugHitboxes (GameState (Objects player objects)) sprite =
-  debugRenderHitbox sprite (player ^. pos) (V2 500 500) (player ^. rot)
-    >> debugRenderHitbox sprite (objects ^. (to head . pos)) (V2 500 500) (objects ^. (to head . rot))
+
+debugHitboxes :: (V2 Double -> IO ()) -> [Living] -> [Terrain] -> IO [()]
+debugHitboxes renderFunc living terr =
+  do
+    _ <- sequence $ (fmap (debugRenderHitbox renderFunc) (fmap (^. lObject) living))
+
+    -- Tr.traceM ("Terrs points" ++ (join (join (fmap (\a -> fmap show (a ^. coll)) terrs))))
+    -- Tr.traceM ("Terrs points total: " ++ (show bunchOfPts))
+    -- Tr.traceM ("I got TEST: " ++ (show terr))
+    -- Tr.traceM ("Terrs points" ++ (show bunchOfPts))
+    -- Tr.traceM ("Terrs points'" ++ (show bunchOfPts'))
+
+    sequence $ (join . join) $ ((fmap . fmap . fmap) renderFunc bunchOfPts)
+    where bunchOfPts = fmap (^. coll) terr

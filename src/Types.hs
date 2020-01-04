@@ -14,14 +14,17 @@ data Object
         _size :: V2 Double,
         _rot :: Double
       }
+  deriving(Show)
 
 makeLenses ''Object
 
 data Terrain
   = Terrain
-      { _collision :: [[Pt']],
+      { _coll :: [[Pt']],
         _tObject :: Object
       }
+  deriving(Show)
+
 
 makeLenses ''Terrain
 
@@ -30,6 +33,7 @@ data Living
       { _alive :: Bool,
         _lObject :: Object
       }
+  deriving(Show)
 
 makeLenses ''Living
 
@@ -48,19 +52,22 @@ data PhysicalState
         _enemies :: [Living],
         _terrain :: [Terrain]
       }
+  deriving(Show)
 
 makeLenses ''PhysicalState
 
 data CameraState
   = CameraState
-      { _zoomLevel :: Double
+      { _zoomLevel :: Int
       }
+  deriving(Show)
 
 data GameState
   = GameState
       {
         _cameraState :: CameraState,
-        _PhysicalState :: PhysicalState
+        _physicalState :: PhysicalState
       }
+  deriving(Show)
 
 makeLenses ''GameState
