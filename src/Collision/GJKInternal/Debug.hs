@@ -10,11 +10,13 @@ import Types
 import Control.Monad
 import qualified Debug.Trace as Tr
 
-debugRenderHitbox :: (RealFloat a) => (V2 a -> IO ()) -> Object -> IO [()]
+debugRenderHitbox :: (V2 Double -> IO ()) -> Object -> IO [()]
 debugRenderHitbox renderFunc obj =
-  let test = (toPt ((obj ^. pos) + ((obj ^. size) / 2)) (obj ^. size) (obj ^. rot))
-      test2 = fmap (\a -> fmap realToFrac a) test
-   in mapM renderFunc test2
+  sequence $ fmap renderFunc (toPt (obj ^. pos) (obj ^. size) (obj ^. rot))
+
+  -- let test = (toPt ((obj ^. pos) + ((obj ^. size) / 2)) (obj ^. size) (obj ^. rot))
+  --     test2 = fmap (\a -> fmap realToFrac a) test
+  --  in mapM renderFunc test2
 
   -- mapM (\terr' -> (fmap (\coll -> debugRenderThing renderFunc sprite  0) ((fmap . fmap) floor (concat (terr' ^. coll))))) terr
    -- let test2 = fmap (\a -> fmap floor a) pts

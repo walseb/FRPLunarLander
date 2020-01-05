@@ -29,8 +29,7 @@ import Types
 import YampaUtils.Types ()
 import Collision.GJKInternal.Util (toPt, ptsApplyObject)
 import Collision.GJKInternal.Debug
-import Control.Applicative
-import qualified Debug.Trace as Tr
+import Control.Monad
 
 initialGame =
   GameState
@@ -41,10 +40,10 @@ initialGame =
     -- Here the points are relative to the object position. In game loop those gets turned into world position
     [(Terrain
       [[(V2 0 0), (V2 500 0), (V2 500 500), (V2 0 500)]]
-      (Object (V2 100 100) (V2 1 1) 0)),
-    (Terrain
-      [[(V2 0 0), (V2 900 0), (V2 900 900), (V2 0 900)]]
-      (Object (V2 0 0) (V2 1 1) 0))
+      (Object (V2 200 200) (V2 1 1) 0))
+    -- (Terrain
+    --   [[(V2 0 0), (V2 900 0), (V2 900 900), (V2 0 900)]]
+    --   (Object (V2 0 0) (V2 1 1) 0))
     ]
     )
 
@@ -97,14 +96,19 @@ applyInputs initialGameState = proc input -> do
 
   let terrains = (initialGameState ^. physicalState . terrain)
   let terrainColl' = fmap (\terr -> ptsApplyObject (terr ^. tObject) (terr ^. coll)) terrains
-  let terrains' = (zipWith (\terr coll' -> (Terrain coll' (terr ^. tObject))) terrains terrainColl')
+
+  let terrains' = (zipWith (\terr coll' -> (Terrain coll'
+                                            -- Ok so here we create a new empty object BECAUSE the rot,pos,etc etc has already been applied to the collision vertices above! It's static
+                                            (Object 0 1 0)
+                                           )) terrains terrainColl')
+  -- let terrains' = (zipWith (\terr coll' -> (Terrain coll' (terr ^. tObject))) terrains terrainColl')
 
   -- Calculate new pos without modifying state
   (rot, playerPos) <- shipControl (initialGameState ^. (physicalState . player . lObject . pos)) (initialGameState ^. (physicalState . player . lObject . rot)) 0 -< vectorizeMovement (input ^. movement)
   let playerSize = initialGameState ^. (physicalState . player . lObject . size)
   enemyPos <- enemyMovement (initialGameState ^. (physicalState . enemies . to head . lObject . pos)) -< (V2 0 (-1))
   let enemySize = initialGameState ^. (physicalState . enemies . to head . lObject . size)
-  isPlayerAlive <- checkCollisions -< (Tr.trace ("original: " ++ show terrainColl' ++  "transformed: " ++ show (concat terrainColl'))) $ ([toPt playerPos playerSize rot], ([toPt enemyPos enemySize 0] ++) (concat terrainColl'))
+  isPlayerAlive <- checkCollisions -< ([toPt playerPos playerSize rot], ([toPt enemyPos enemySize 0] ++) (join terrainColl'))
   zoomLevel <- accumHoldBy zoomLevel 3 -< Event (input ^. Input.zoom)
   returnA -<
      (GameState
@@ -114,7 +118,6 @@ applyInputs initialGameState = proc input -> do
               (Living isPlayerAlive (Object playerPos playerSize rot))
               -- Enemies
               [(Living True (Object enemyPos enemySize 0))]
-
              terrains'
           )
       )
@@ -128,10 +131,10 @@ update origGameState = proc events -> do
       fromJust (newInputState ^. quit ^? pressed)
     )
 
--- screenSize = V2 2560 1440
-screenSize = V2 1280 720
+screenSize = V2 2560 1440
+-- screenSize = V2 1280 720
 
-test9 game sprite2 renderSpr pos = debugHitboxes (renderSpr sprite2 ((fmap floor (pos :: V2 Double)) :: V2 CInt) (V2 100 100)) game
+-- debugRender game sprite2 renderSpr pos = debugHitboxes (renderSpr sprite2 ((fmap floor (pos :: V2 Double)) :: V2 CInt) (V2 100 100)) game
 
 render :: S.Renderer -> Resources -> (GameState, Bool) -> IO Bool
 render renderer (Resources sprite sprite2 scene) (game@(GameState (CameraState zoomLevel) (PhysicalState player objects terrain)), exit) =
@@ -140,15 +143,20 @@ render renderer (Resources sprite sprite2 scene) (game@(GameState (CameraState z
     S.clear renderer
     -- Tr.traceM ("Terrain points" ++ (join (join (fmap (\a -> fmap show (a ^. coll)) terrain))))
 
-    let renderDebug = \pos -> renderSpr sprite2 (fmap floor (pos :: V2 Double)) (V2 100 100) 0
-    -- Tr.traceM ("HERE! " ++ show terrain)
-    debugHitboxes renderDebug (objects ++ [player]) terrain
+    let renderDebug = \pos -> renderSpr sprite2 (fmap floor (pos :: V2 Double)) (V2 50 50) 0
+    let renderDebug2 = \pos -> renderSpr sprite (fmap floor (pos :: V2 Double)) (V2 50 50) 0
+    -- debugHitboxes renderDebug2 (objects ++ [player]) terrain
+
+    sequence $ (join . join) $ (fmap . fmap . fmap) renderDebug (fmap (^. coll) terrain)
+
+    -- render the ACTUAL position of the player
+    -- sequence $ fmap renderDebug (toPt (player ^. (lObject . pos)) (player ^. (lObject . size)) (player ^. (lObject . rot)))
 
     case player ^. alive of
       True ->
         renderSpr
           sprite
-          (fmap floor (player ^. (lObject . pos)))
+          (fmap floor (player ^. (lObject . pos) - (player ^. (lObject . size) / 2)))
           -- (V2 500 500)
           (player ^. (lObject . size))
           (coerce (player ^. (lObject . rot)))
@@ -156,7 +164,7 @@ render renderer (Resources sprite sprite2 scene) (game@(GameState (CameraState z
         pure ()
     renderSpr
       sprite
-      (floor <$> (objects ^. (to head . lObject . pos)))
+      (floor <$> (objects ^. (to head . lObject . pos)) - ((objects ^. (to head . lObject . size)) / 2))
       -- (V2 500 500)
       (fmap coerce (objects ^. (to head . lObject . size)))
       (coerce (objects ^. (to head . lObject . rot)))

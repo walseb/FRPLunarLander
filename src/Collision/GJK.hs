@@ -22,10 +22,10 @@ checkCollisions =
           False
     )
 
-checkCollisionsEvent :: SF ([[Pt']], [[Pt']]) (Bool, Event ())
+checkCollisionsEvent :: SF ([[Pt']], [[Pt']]) (Bool, Event ([[Pt']], [[Pt']]))
 checkCollisionsEvent = proc (a, b) ->
   returnA -< case collides a b of
-    True -> (False, Event ())
+    True -> (False, Event (a, b))
     False -> (True, NoEvent)
 
 collides :: [[Pt']] -> [[Pt']] -> Bool
