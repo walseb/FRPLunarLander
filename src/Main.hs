@@ -28,7 +28,6 @@ import qualified Sprite as SP
 import Types
 import YampaUtils.Types ()
 import Collision.GJKInternal.Util (toPt, ptsApplyObject)
-import Collision.GJKInternal.Debug
 import Control.Monad
 
 initialGame =
@@ -72,36 +71,14 @@ zoomLevel zoom (ButtonAxisState _ (V2 _ True)) = if zoom - 1 > 0 then zoom -1 el
 zoomLevel zoom (ButtonAxisState _ _) = zoom
 zoomLevel zoom (ScrollState scrollDist) = if zoom + scrollDist > 0 then zoom + scrollDist else zoom
 
---   (3 +
---    3)
--- test = (fmap (+1)[3,2,1])
---   test
--- test = (fmap
---         ([[(V2 8 8), (V2 8 8)], [(V2 8 8), (V2 8 8)]] ++)
---         [[[(V2 8 8), (V2 8 8)], [(V2 8 8), (V2 8 8)]],
---          [[(V2 8 8), (V2 8 8)], [(V2 8 8), (V2 8 8)]]])
-
 applyInputs :: GameState -> SF InputState GameState
 applyInputs initialGameState = proc input -> do
-  -- TODO: Problem here is that it only checks for 1 terrain object
-  -- let terrainColl = initialGameState ^. (physicalState . terrain . to head . coll)
-
-  -- Problem here: It doesn't apply size
-  -- let terrainColl' = fmap
-  --                      ptsApplyObject
-  --                      (fmap (^. tObject) (initialGameState ^. (physicalState . terrain)))
-  --                    <*>
-  --                      fmap (^. coll)
-  --                      (initialGameState ^. (physicalState . terrain))
-
   let terrains = (initialGameState ^. physicalState . terrain)
   let terrainColl' = fmap (\terr -> ptsApplyObject (terr ^. tObject) (terr ^. coll)) terrains
 
   let terrains' = (zipWith (\terr coll' -> (Terrain coll'
-                                            -- Ok so here we create a new empty object BECAUSE the rot,pos,etc etc has already been applied to the collision vertices above! It's static
-                                            (Object 0 1 0)
+                                           (terr ^. tObject)
                                            )) terrains terrainColl')
-  -- let terrains' = (zipWith (\terr coll' -> (Terrain coll' (terr ^. tObject))) terrains terrainColl')
 
   -- Calculate new pos without modifying state
   (rot, playerPos) <- shipControl (initialGameState ^. (physicalState . player . lObject . pos)) (initialGameState ^. (physicalState . player . lObject . rot)) 0 -< vectorizeMovement (input ^. movement)
@@ -168,11 +145,13 @@ render renderer (Resources sprite sprite2 scene) (game@(GameState (CameraState z
       -- (V2 500 500)
       (fmap coerce (objects ^. (to head . lObject . size)))
       (coerce (objects ^. (to head . lObject . rot)))
-    renderScene
-      scene
-      (V2 1000 50)
-      ((V2 1920 1080) * 10)
-      0
+    sequence (fmap
+              (\terr ->
+                renderScene
+                  scene
+                  (fmap floor (terr ^. (tObject . pos)))
+                  (terr ^. (tObject . size)) 0)
+              terrain)
     S.present renderer
     return exit
     where
