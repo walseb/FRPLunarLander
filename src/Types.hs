@@ -8,11 +8,11 @@ import qualified Sprite as SP
 import YampaUtils.Types ()
 import Collision.GJKInternal.Support
 
-data Object
+data Object a
   = Object
-      { _pos :: V2 Double,
-        _size :: V2 Double,
-        _rot :: Double
+      { _pos :: V2 a,
+        _size :: V2 a,
+        _rot :: a
       }
   deriving(Show)
 
@@ -20,8 +20,8 @@ makeLenses ''Object
 
 data Terrain
   = Terrain
-      { _coll :: [[Pt']],
-        _tObject :: Object
+      { _coll :: [[Pt' Double]],
+        _tObject :: Object Double
       }
   deriving(Show)
 
@@ -31,7 +31,7 @@ makeLenses ''Terrain
 data Living
   = Living
       { _alive :: Bool,
-        _lObject :: Object
+        _lObject :: Object Double
       }
   deriving(Show)
 

@@ -8,14 +8,12 @@ import Control.Lens
 import Linear
 import Types
 
-ptsApplyObject :: Object -> [[Pt']] -> [[Pt']]
+ptsApplyObject :: (RealFloat a) => Object a -> [[Pt' a]] -> [[Pt' a]]
 ptsApplyObject obj pts =
-  (fmap . fmap) (ptsTransform obj') pts
-  where
-    obj' = (obj ^. pos, obj ^. size, obj ^. rot)
+  (fmap . fmap) (ptsTransform obj) pts
 
-ptsTransform :: (RealFloat a) => (V2 a, V2 a, a) -> V2 a -> V2 a
-ptsTransform (pos, size, rot) pt = rotateAroundAxis rot (size * (pos + pt)) pos
+ptsTransform :: (RealFloat a) => Object a -> V2 a -> V2 a
+ptsTransform (Object pos size rot) pt = rotateAroundAxis (degToRad rot) (pos + (size * pt)) pos
 
 rotateAroundAxis :: (RealFloat a) => a -> V2 a -> V2 a -> V2 a
 rotateAroundAxis theta (V2 x y) (V2 xO yO)  =
@@ -24,9 +22,9 @@ rotateAroundAxis theta (V2 x y) (V2 xO yO)  =
     x' = xO + (x - xO) * cos(theta) - (y - yO) * sin(theta)
     y' = yO + (x - xO) * sin(theta) + (y - yO) * cos(theta)
 
-toPt :: (RealFloat a) => V2 a -> V2 a -> a -> [Pt']
+toPt :: (RealFloat a) => V2 a -> V2 a -> a -> [Pt' a]
 toPt pos size rot =
-  (fmap . fmap) realToFrac [topLeft, topRight, botLeft, botRight]
+  [topLeft, topRight, botLeft, botRight]
   where
     -- TODO: Doesn't work on rectangles
     midRightLocal = moveAlongAxis pos ((size ^. _x) / 2) (rot + 90) - pos

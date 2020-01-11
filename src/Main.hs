@@ -38,8 +38,21 @@ initialGame =
         [(Living True (Object (V2 0 1200) (V2 500 500) 0))]
     -- Here the points are relative to the object position. In game loop those gets turned into world position
     [(Terrain
-      [[(V2 0 0), (V2 500 0), (V2 500 500), (V2 0 500)]]
-      (Object (V2 200 200) (V2 1 1) 0))
+     [[(V2 0 0.36666666666666664),
+       (V2 0.3807291666666667 0.38055555555555554),
+       (V2 0.3807291666666667 1),
+       (V2 0 1)],
+
+       [(V2 0.3807291666666667 0.7666666666666667),
+       (V2 0.7197916666666667 0.7666666666666667),
+       (V2 0.7229166666666667 1),
+       (V2 0.3807291666666667 1)],
+
+       [(V2 0.7322916666666667 0.3435185185185185),
+       (V2 1 0.3675925925925926),
+       (V2 1 1),
+       (V2 0.7322916666666667 1)]]
+      (Object (V2 200 200) (V2 5000 5000) 0))
     -- (Terrain
     --   [[(V2 0 0), (V2 900 0), (V2 900 900), (V2 0 900)]]
     --   (Object (V2 0 0) (V2 1 1) 0))
@@ -69,7 +82,7 @@ zoomLevel :: Int -> KeyState -> Int
 zoomLevel zoom (ButtonAxisState _ (V2 True _)) = zoom + 1
 zoomLevel zoom (ButtonAxisState _ (V2 _ True)) = if zoom - 1 > 0 then zoom -1 else zoom
 zoomLevel zoom (ButtonAxisState _ _) = zoom
-zoomLevel zoom (ScrollState scrollDist) = if zoom + scrollDist > 0 then zoom + scrollDist else zoom
+zoomLevel zoom (ScrollState scrollDist) = if zoom - scrollDist > 0 then zoom - scrollDist else zoom
 
 applyInputs :: GameState -> SF InputState GameState
 applyInputs initialGameState = proc input -> do
@@ -150,7 +163,8 @@ render renderer (Resources sprite sprite2 scene) (game@(GameState (CameraState z
                 renderScene
                   scene
                   (fmap floor (terr ^. (tObject . pos)))
-                  (terr ^. (tObject . size)) 0)
+                  (terr ^. (tObject . size))
+                  (coerce (terr ^. (tObject . rot))))
               terrain)
     S.present renderer
     return exit

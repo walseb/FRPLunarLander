@@ -11,7 +11,7 @@ import FRP.Yampa
 import GJK.Collision
 import Control.Applicative
 
-checkCollisions :: SF ([[Pt']], [[Pt']]) Bool
+checkCollisions :: (RealFloat a, Show a) => SF ([[Pt' a]], [[Pt' a]]) Bool
 checkCollisions =
   switch
     checkCollisionsEvent
@@ -22,13 +22,13 @@ checkCollisions =
           False
     )
 
-checkCollisionsEvent :: SF ([[Pt']], [[Pt']]) (Bool, Event ([[Pt']], [[Pt']]))
+checkCollisionsEvent :: (RealFloat a) => SF ([[Pt' a]], [[Pt' a]]) (Bool, Event ([[Pt' a]], [[Pt' a]]))
 checkCollisionsEvent = proc (a, b) ->
   returnA -< case collides a b of
     True -> (False, Event (a, b))
     False -> (True, NoEvent)
 
-collides :: [[Pt']] -> [[Pt']] -> Bool
+collides :: (RealFloat a) => [[Pt' a]] -> [[Pt' a]] -> Bool
 collides pts pts' =
   mapThing $ liftA2 collision' pts pts'
   where
@@ -37,5 +37,5 @@ collides pts pts' =
     mapThing (_:as) = mapThing as
     mapThing [] = False
 
-collision' :: [Pt'] -> [Pt'] -> Maybe Bool
+collision' :: (RealFloat a) => [Pt' a] -> [Pt' a] -> Maybe Bool
 collision' pts pts' = collision 5 (pts, polySupport') (pts', polySupport')

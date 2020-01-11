@@ -10,7 +10,7 @@ import Types
 import Control.Monad
 import qualified Debug.Trace as Tr
 
-debugRenderHitbox :: (V2 Double -> IO ()) -> Object -> IO [()]
+debugRenderHitbox :: (RealFloat a) => (V2 a -> IO ()) -> Object a -> IO [()]
 debugRenderHitbox renderFunc obj =
   sequence $ fmap renderFunc (toPt (obj ^. pos) (obj ^. size) (obj ^. rot))
 
