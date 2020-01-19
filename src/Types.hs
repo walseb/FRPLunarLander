@@ -41,16 +41,27 @@ data Resources
   = Resources
       { _objectSprite :: SP.Sprite,
         _objectSprite2 :: SP.Sprite,
-        _scene :: SP.Sprite
+        _sceneSprite :: SP.Sprite
       }
 
 makeLenses ''Resources
 
+data Scene
+  = Scene
+      {
+        _terrain :: [Terrain],
+        _landingSpots :: [Terrain]
+      }
+  deriving(Show)
+
+makeLenses ''Scene
+
 data PhysicalState
   = PhysicalState
-      { _player :: Living,
+      {
+        _player :: Living,
         _enemies :: [Living],
-        _terrain :: [Terrain]
+        _scene :: Scene
       }
   deriving(Show)
 

@@ -15,11 +15,8 @@ checkCollisions :: (RealFloat a, Show a) => SF ([[Pt' a]], [[Pt' a]]) Bool
 checkCollisions =
   switch
     checkCollisionsEvent
-    ( \a ->
-        Tr.trace
-          ("Player dead!!: Here: " ++ show a)
-          constant
-          False
+    ( \a -> Tr.trace ("Player dead!!: Here: " ++ show a)
+          constant False
     )
 
 checkCollisionsEvent :: (RealFloat a) => SF ([[Pt' a]], [[Pt' a]]) (Bool, Event ([[Pt' a]], [[Pt' a]]))

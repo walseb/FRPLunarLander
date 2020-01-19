@@ -10,6 +10,8 @@ import qualified SDL.Image
 import SDL.Vect
 import SDL.Video.Renderer
 import Control.Applicative
+import Control.Lens
+import qualified Debug.Trace as Tr
 
 -- | A loaded sprite.
 data Sprite = Sprite
@@ -59,14 +61,14 @@ animate spr sWidth =
 {-# INLINE animate #-}
 
 -- | Render the sprite at the given coordinates.
-render :: MonadIO m => Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> m ()
-render spr pos sourceRect destRect =
-  copy
-    (spriteRenderer spr)
-    (spriteTexture spr)
-    sourceRect
-    (Just (Rectangle (P pos) destRect))
-{-# INLINE render #-}
+-- render :: MonadIO m => Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> m ()
+-- render spr pos sourceRect destRect =
+--   copy
+--     (spriteRenderer spr)
+--     (spriteTexture spr)
+--     sourceRect
+--     (Just (Rectangle (P (-pos)) destRect))
+-- {-# INLINE render #-}
 
 -- Render the sprite at the given coordinates.
 -- Here spr is the sprite to be rendered
@@ -83,6 +85,7 @@ renderEx spr pos sourceRect destRect theta =
     (spriteTexture spr)
     sourceRect
     (Just (Rectangle (P pos) destRect))
+    -- This renders the rotation in the wrong way
     (-theta)
 {-# INLINE renderEx #-}
 
@@ -90,16 +93,23 @@ renderEx spr pos sourceRect destRect theta =
 -- deltaPos is the distance between the player and the camera. This means the distance everything needs to be moved by to put the camera at the correct position
 renderEx' :: MonadIO m => V2 CInt -> V2 CInt -> Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
 renderEx' deltaPos zoomLevel spr pos sourceRect destRect theta center =
+  Tr.trace ("pos is: " ++ show (negateYAxis pos)) $
   renderEx
     spr
-    ((pos + deltaPos) `v2Div` zoomLevel)
+    ((negateYAxis pos + deltaPos) `v2Div` zoomLevel)
     sourceRect
     (destRect `v2Div` zoomLevel)
     theta
     centerRot'
     where
-      v2Div = liftA2 div
+      zoomLevel' = negateYAxis zoomLevel
       centerRot' = case center of
                     Just (P a) -> Just $ P $ a `v2Div` zoomLevel
                     Nothing -> Nothing
 {-# INLINE renderEx' #-}
+
+negateYAxis :: (Num a) => V2 a -> V2 a
+negateYAxis = _y `over` negate
+-- negateYAxis = id
+
+v2Div v v' = liftA2 div v v'
