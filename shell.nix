@@ -5,6 +5,7 @@ pkgs.mkShell {
     pkgs.ghc
     pkgs.SDL2
     pkgs.SDL2_image
+    pkgs.SDL2_ttf
     pkgs.pkg-config
   ];
 }

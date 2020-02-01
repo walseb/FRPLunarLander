@@ -78,38 +78,33 @@ animate spr sWidth =
 -- Flip is weather or not to flip the sprite on x and y axis
 -- sourceRect is the source rectangle to copy, or 'Nothing' for the whole texture
 -- destRect is the destination rectangle to copy to, or 'Nothing' for the whole rendering target. The texture will be stretched to fill the given rectangle.
-renderEx :: MonadIO m => Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
-renderEx spr pos sourceRect destRect theta =
+renderEx :: MonadIO m => Renderer -> Texture -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
+renderEx rend spr pos sourceRect destRect theta =
   copyEx
-    (spriteRenderer spr)
-    (spriteTexture spr)
+    rend
+    spr
     sourceRect
     (Just (Rectangle (P pos) destRect))
     -- This renders the rotation in the wrong way
-    (-theta)
+    theta
 {-# INLINE renderEx #-}
 
 -- Render ex except with distortions based on zoom level and whatever
 -- deltaPos is the distance between the player and the camera. This means the distance everything needs to be moved by to put the camera at the correct position
-renderEx' :: MonadIO m => V2 CInt -> V2 CInt -> Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
-renderEx' deltaPos zoomLevel spr pos sourceRect destRect theta center =
-  Tr.trace ("pos is: " ++ show (negateYAxis pos)) $
+renderEx' :: MonadIO m => Renderer -> V2 CInt -> V2 CInt -> Texture -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
+renderEx' rend deltaPos zoomLevel spr pos sourceRect destRect theta center =
+  -- Tr.trace ("pos is: " ++ show (negateYAxis pos)) $
   renderEx
+    rend
     spr
-    ((negateYAxis pos + deltaPos) `v2Div` zoomLevel)
+    ((pos + deltaPos) `v2Div` zoomLevel)
     sourceRect
     (destRect `v2Div` zoomLevel)
     theta
-    centerRot'
+    center'
     where
-      zoomLevel' = negateYAxis zoomLevel
-      centerRot' = case center of
-                    Just (P a) -> Just $ P $ a `v2Div` zoomLevel
-                    Nothing -> Nothing
+      v2Div = liftA2 div
+      center' = case center of
+                  Just (P c) -> Just $ P $ c `v2Div` zoomLevel
+                  Nothing -> Nothing
 {-# INLINE renderEx' #-}
-
-negateYAxis :: (Num a) => V2 a -> V2 a
-negateYAxis = _y `over` negate
--- negateYAxis = id
-
-v2Div v v' = liftA2 div v v'

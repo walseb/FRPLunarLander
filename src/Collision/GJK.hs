@@ -1,38 +1,91 @@
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Collision.GJK
-  ( checkCollisions,
+  ( collidesWrap,
+    collidesWrapScore,
+    collides',
+    collidesScore,
   )
 where
 
 import Collision.GJKInternal.Support
-import qualified Debug.Trace as Tr
-import FRP.Yampa
-import GJK.Collision
+import Collision.GJKInternal.Util
 import Control.Applicative
+import Control.Lens
+import Control.Monad
+import GJK.Collision
+import Types
 
-checkCollisions :: (RealFloat a, Show a) => SF ([[Pt' a]], [[Pt' a]]) Bool
-checkCollisions =
-  switch
-    checkCollisionsEvent
-    ( \a -> Tr.trace ("Player dead!!: Here: " ++ show a)
-          constant False
-    )
+type PlayerHitLandingspot = Bool
 
-checkCollisionsEvent :: (RealFloat a) => SF ([[Pt' a]], [[Pt' a]]) (Bool, Event ([[Pt' a]], [[Pt' a]]))
-checkCollisionsEvent = proc (a, b) ->
-  returnA -< case collides a b of
-    True -> (False, Event (a, b))
-    False -> (True, NoEvent)
+collidesScore :: (RealFloat a) => [[Pt' a]] -> ([[Pt' a]], Int) -> Maybe Int
+collidesScore pts (pts', score) =
+  case collides' pts pts' of
+    True -> Just score
+    False -> Nothing
 
-collides :: (RealFloat a) => [[Pt' a]] -> [[Pt' a]] -> Bool
-collides pts pts' =
-  mapThing $ liftA2 collision' pts pts'
+collidesWrapScore :: Scene -> MovingState -> Maybe (PlayerHitLandingspot, Int)
+collidesWrapScore (Scene terrain landingSpots) (MovingState player enemies) =
+  case playerHitTerrain of
+    True ->
+      Just (False, 0)
+    False ->
+      case playerHitLandingspot of
+        Just score ->
+          Just (True, score)
+        Nothing ->
+          Nothing
   where
-    mapThing :: [Maybe Bool] -> Bool
-    mapThing (Just True:_) = True
-    mapThing (_:as) = mapThing as
-    mapThing [] = False
+    playerObj = [toPt (player ^. (pLiving . lObject))]
+    playerHitTerrain =
+      collides'
+        playerObj
+        ( [((toPt (enemies ^. (to head . lObject))))]
+            ++ [((toPt (enemies ^. (to head . lObject))))]
+            ++ (join (fmap (^. coll) terrain))
+        )
+    playerHitLandingspot =
+      collidesScore
+        playerObj
+        ( head
+            ( zip
+                (fmap (^. (lTerrain . coll)) landingSpots)
+                (fmap (^. pointValue) landingSpots)
+            )
+        )
 
-collision' :: (RealFloat a) => [Pt' a] -> [Pt' a] -> Maybe Bool
-collision' pts pts' = collision 5 (pts, polySupport') (pts', polySupport')
+-- If nothing then player didn't hit anything. If Just False then player hit the terrain. If Just True then player hit landing spot
+collidesWrap :: Scene -> MovingState -> Maybe PlayerHitLandingspot
+collidesWrap (Scene terrain landingSpots) (MovingState player enemies) =
+  case playerHitTerrain of
+    True ->
+      Just False
+    False ->
+      case playerHitLandingspot of
+        True ->
+          Just True
+        False ->
+          Nothing
+  where
+    playerObj = [toPt (player ^. (pLiving . lObject))]
+    playerHitTerrain =
+      collides'
+        playerObj
+        ([((toPt (enemies ^. (to head . lObject))))] ++ ((^. (coll)) =<< terrain))
+    playerHitLandingspot =
+      collides'
+        playerObj
+        ([((toPt (enemies ^. (to head . lObject))))] ++ ((^. (lTerrain . coll)) =<< landingSpots))
+
+collides' :: (RealFloat a) => [[Pt' a]] -> [[Pt' a]] -> Bool
+collides' pts pts' =
+  any
+    ( \case
+        Just True -> True
+        _ -> False
+    )
+    $ liftA2 collides pts pts'
+
+collides :: (RealFloat a) => [Pt' a] -> [Pt' a] -> Maybe Bool
+collides pts pts' = collision 5 (pts, polySupport') (pts', polySupport')

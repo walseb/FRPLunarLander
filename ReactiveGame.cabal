@@ -20,9 +20,14 @@ executable ReactiveGame
                 , extra
                 , lens
                 , linear
+
                 , sdl2
                 , sdl2-image
                 , sdl2-sprite
+                , sdl2-ttf
+                -- SDL TFF dependency
+                , text
+
                 , bearriver
                 , template-haskell
                 , gjk

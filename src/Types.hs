@@ -2,11 +2,13 @@
 
 module Types where
 
+import Collision.GJKInternal.Support
 import Control.Lens
 import Linear
 import qualified Sprite as SP
 import YampaUtils.Types ()
-import Collision.GJKInternal.Support
+import SDL.Font (Font)
+import SDL as S
 
 data Object a
   = Object
@@ -14,7 +16,7 @@ data Object a
         _size :: V2 a,
         _rot :: a
       }
-  deriving(Show)
+  deriving (Show)
 
 makeLenses ''Object
 
@@ -23,8 +25,7 @@ data Terrain
       { _coll :: [[Pt' Double]],
         _tObject :: Object Double
       }
-  deriving(Show)
-
+  deriving (Show)
 
 makeLenses ''Terrain
 
@@ -33,37 +34,64 @@ data Living
       { _alive :: Bool,
         _lObject :: Object Double
       }
-  deriving(Show)
+  deriving (Show)
 
 makeLenses ''Living
 
 data Resources
   = Resources
-      { _objectSprite :: SP.Sprite,
-        _objectSprite2 :: SP.Sprite,
-        _sceneSprite :: SP.Sprite
+      {
+        _font :: Font,
+        _objectSprite :: S.Texture,
+        _objectSprite2 :: S.Texture,
+        _sceneSprite :: S.Texture,
+        _sceneDangerousSprite :: S.Texture
       }
 
 makeLenses ''Resources
 
+data LandingSpot
+  = LandingSpot
+      { _pointValue :: Int,
+        _lTerrain :: Terrain
+      }
+  deriving (Show)
+
+makeLenses ''LandingSpot
+
 data Scene
   = Scene
-      {
-        _terrain :: [Terrain],
-        _landingSpots :: [Terrain]
+      { _sTerrain :: [Terrain],
+        _landingSpots :: [LandingSpot]
       }
-  deriving(Show)
+  deriving (Show)
 
 makeLenses ''Scene
 
+data Player
+  = Player
+      { _pLiving :: Living,
+        _score :: Int
+      }
+  deriving (Show)
+
+makeLenses ''Player
+
+data MovingState
+  = MovingState
+      { _player :: Player,
+        _enemies :: [Living]
+      }
+  deriving (Show)
+
+makeLenses ''MovingState
+
 data PhysicalState
   = PhysicalState
-      {
-        _player :: Living,
-        _enemies :: [Living],
+      { _movingState :: MovingState,
         _scene :: Scene
       }
-  deriving(Show)
+  deriving (Show)
 
 makeLenses ''PhysicalState
 
@@ -71,14 +99,13 @@ data CameraState
   = CameraState
       { _zoomLevel :: Int
       }
-  deriving(Show)
+  deriving (Show)
 
 data GameState
   = GameState
-      {
-        _cameraState :: CameraState,
+      { _cameraState :: CameraState,
         _physicalState :: PhysicalState
       }
-  deriving(Show)
+  deriving (Show)
 
 makeLenses ''GameState
