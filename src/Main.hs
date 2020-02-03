@@ -131,39 +131,21 @@ zoomLevel zoom (ScrollState scrollDist) = if zoom - (fromIntegral scrollDist) > 
 
 type NonLethalCollision = Bool
 
--- Bool event refers to if the collision was at lethal velocity or not
-livingMovement :: (RealFloat a) => Living -> (V2 a) -> [Living] -> Scene -> SF InputState ((Living, [Living]), Event (Maybe (NonLethalCollision, Living, [Living], V2 a)))
-livingMovement (Living _ initPlayer) playerVelInit intiEnemies scene = proc input -> do
-  (playerObj, playerVel, playerRot) <- shipControl initPlayer (fmap realToFrac playerVelInit) -< vectorizeMovement (input ^. movement)
-  enemy <- enemyBehavior (head intiEnemies ^. lObject) -< (V2 0 (-1))
-  let playerCollision = collidesWrap scene (MovingState (Player (Living True playerObj) 0) [(Living True enemy)])
-  -- returnA -< (Living True playerObj, [(Living True enemy)])
-  returnA -<
-    ( (Living True playerObj, [(Living True enemy)]),
-      case playerCollision of
-        Nothing -> NoEvent
-        Just False -> Event Nothing
-        Just True ->
-          case (sum (abs playerVel) < 1000) && (playerRot < 10) && (playerRot > -10) of
-            True -> Event $ Just (True, (Living True playerObj), [(Living True enemy)], fmap realToFrac playerVel)
-            False -> Event Nothing
-    )
-
-livingMovementScore :: (RealFloat a) => Player -> (V2 a) -> [Living] -> Scene -> SF InputState ((Player, [Living]), Event (Maybe (NonLethalCollision, Player, [Living], V2 a)))
+livingMovementScore :: (RealFloat a) => Player -> (V2 a) -> [Living] -> Scene -> SF InputState ((Player, [Living]), Event (Maybe (NonLethalCollision, Player, [Living], V2 a, Int)))
 livingMovementScore p@(Player (Living _ iPlayerObj) _) playerVelInit intiEnemies scene = proc input -> do
   (playerObj, playerVel, playerRot) <- shipControl iPlayerObj (fmap realToFrac playerVelInit) -< vectorizeMovement (input ^. movement)
   enemy <- enemyBehavior (head intiEnemies ^. lObject) -< (V2 0 (-1))
   let player' = (((pLiving . lObject) .~ playerObj) p)
-  let playerCollision = collidesWrap scene (MovingState player' [(Living True enemy)])
+  let playerCollision = collidesWrapScore scene (MovingState player' [(Living True enemy)])
   -- returnA -< (Living True playerObj, [(Living True enemy)])
   returnA -<
     ( (player', [(Living True enemy)]),
       case playerCollision of
         Nothing -> NoEvent
-        Just False -> Event Nothing
-        Just True ->
+        Just (False, _) -> Event Nothing
+        Just (True, score) ->
           case (sum (abs playerVel) < 1000) && (playerRot < 10) && (playerRot > -10) of
-            True -> Event $ Just (True, player', [(Living True enemy)], fmap realToFrac playerVel)
+            True -> Event $ Just (True, player', [(Living True enemy)], fmap realToFrac playerVel, score)
             False -> Event Nothing
     )
 
@@ -175,25 +157,6 @@ solveCollision scene (MovingState player enemies) =
     Just False -> (Player (Living False (player ^. pLiving . lObject)) (player ^. score))
     Nothing -> player
 
--- Return the score value of the object hit
-solveCollisionScore :: Scene -> MovingState -> Player
-solveCollisionScore scene (MovingState player' enemies) =
-  case collidesWrapScore scene (MovingState player' enemies) of
-    Just (True, score') ->
-      let score'' = player' ^. score in
-        (Player (initialGame ^. (physicalState . movingState . player . pLiving)) (score' + score''))
-    Just (False, _) -> ((pLiving . alive) .~ False) player'
-    Nothing -> player'
-
-collisionSwitch :: (RealFloat a) => Player -> [Living] -> Scene -> V2 a -> SF InputState (Living, [Living])
-collisionSwitch (Player player score) enemies scene playerInitVel =
-  switch
-    (livingMovement player playerInitVel enemies scene)
-    ( \d ->
-        case d of
-          (Just (True, player', enemies', playerVel)) -> collisionSwitch (solveCollision scene (MovingState (Player player' 0) enemies')) enemies' scene (playerVel / 2)
-          Nothing -> constant (player, enemies)
-    )
 
 -- Same as collisionSwitch except instead of keeping the player from falling through object on proper non-lethal collision with landing spot it awards the player with points
 collisionWinSwitch :: (RealFloat a) => Player -> [Living] -> Scene -> V2 a -> SF InputState (Player, [Living])
@@ -202,9 +165,12 @@ collisionWinSwitch player enemies scene playerInitVel =
     (livingMovementScore player playerInitVel enemies scene)
     ( \d ->
         case d of
-          (Just (True, player', enemies', playerVel)) -> collisionWinSwitch (solveCollisionScore scene (MovingState player' enemies')) enemies' scene (playerVel / 2)
+          (Just (True, player', enemies', playerVel, score)) -> collisionWinSwitch (addScore player score) enemies scene playerInitVel
           Nothing -> constant (player, enemies)
     )
+  where
+    addScore :: Player -> Int -> Player
+    addScore player' score' = (score `over` (+ score')) player'
 
 applyInputs :: GameState -> SF InputState GameState
 applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer iEnemies) scene)) =
