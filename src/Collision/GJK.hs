@@ -1,13 +1,7 @@
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Collision.GJK
-  ( collidesWrap,
-    collidesWrapScore,
-    collides',
-    collidesScore,
-  )
-where
+module Collision.GJK where
 
 import Collision.GJKInternal.Support
 import Collision.GJKInternal.Util
@@ -16,8 +10,15 @@ import Control.Lens
 import Control.Monad
 import GJK.Collision
 import Types
+import Linear
 
-type PlayerHitLandingspot = Bool
+-- Completely solves collision by moving the player up and re-trying collision test
+solveCollision :: Scene -> MovingState -> Player
+solveCollision scene (MovingState player enemies) =
+  case collidesWrap scene (MovingState player enemies) of
+    Just True -> solveCollision scene (MovingState (((pLiving . lObject . pos . _y) `over` (+ 8)) player) enemies)
+    Just False -> (Player (Living False (player ^. pLiving . lObject)) (player ^. score))
+    Nothing -> player
 
 collidesScore :: (RealFloat a) => [[Pt' a]] -> ([[Pt' a]], Int) -> Maybe Int
 collidesScore pts (pts', score) =
@@ -25,17 +26,20 @@ collidesScore pts (pts', score) =
     True -> Just score
     False -> Nothing
 
-collidesWrapScore :: Scene -> MovingState -> Maybe (PlayerHitLandingspot, Int)
+type Score = Int
+data PlayerCollided = HitUnlandable | HitLandable Score | NoHit
+
+collidesWrapScore :: Scene -> MovingState -> PlayerCollided
 collidesWrapScore (Scene terrain landingSpots) (MovingState player enemies) =
   case playerHitTerrain of
     True ->
-      Just (False, 0)
+      HitUnlandable
     False ->
       case playerHitLandingspot of
         Just score ->
-          Just (True, score)
+          HitLandable score
         Nothing ->
-          Nothing
+          NoHit
   where
     playerObj = [toPt (player ^. (pLiving . lObject))]
     playerHitTerrain =
@@ -54,6 +58,8 @@ collidesWrapScore (Scene terrain landingSpots) (MovingState player enemies) =
                 (fmap (^. pointValue) landingSpots)
             )
         )
+
+type PlayerHitLandingspot = Bool
 
 -- If nothing then player didn't hit anything. If Just False then player hit the terrain. If Just True then player hit landing spot
 collidesWrap :: Scene -> MovingState -> Maybe PlayerHitLandingspot

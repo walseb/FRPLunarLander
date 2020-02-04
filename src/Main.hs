@@ -16,6 +16,7 @@ import Control.Monad
 import Data.Coerce
 import Data.Maybe
 import Data.String (fromString)
+import Data.Text (pack)
 import qualified Debug.Trace as Tr
 import Enemy (enemyBehavior)
 import FRP.Yampa
@@ -23,14 +24,13 @@ import Foreign.C.Types
 import Input
 import Linear
 import qualified SDL as S
+import qualified SDL.Font as F
+import SDL.Image as SI
 import qualified SDL.Vect as SV
 import Ship (shipControl)
 import qualified Sprite as SP
 import Types
 import YampaUtils.Types ()
-import qualified SDL.Font as F
-import Data.Text (pack)
-import SDL.Image as SI
 
 type Score = Int
 
@@ -141,22 +141,13 @@ livingMovementScore p@(Player (Living _ iPlayerObj) _) playerVelInit intiEnemies
   returnA -<
     ( (player', [(Living True enemy)]),
       case playerCollision of
-        Nothing -> NoEvent
-        Just (False, _) -> Event Nothing
-        Just (True, score) ->
-          case (sum (abs playerVel) < 1000) && (playerRot < 10) && (playerRot > -10) of
+        NoHit -> NoEvent
+        HitUnlandable -> Event Nothing
+        (HitLandable score) ->
+          case (sum (abs playerVel) < 500) && (playerRot < 10) && (playerRot > -10) of
             True -> Event $ Just (True, player', [(Living True enemy)], fmap realToFrac playerVel, score)
             False -> Event Nothing
     )
-
--- Completely solves collision by moving the player up and re-trying collision test
-solveCollision :: Scene -> MovingState -> Player
-solveCollision scene (MovingState player enemies) =
-  case collidesWrap scene (MovingState player enemies) of
-    Just True -> solveCollision scene (MovingState (((pLiving . lObject . pos . _y) `over` (+ 8)) player) enemies)
-    Just False -> (Player (Living False (player ^. pLiving . lObject)) (player ^. score))
-    Nothing -> player
-
 
 -- Same as collisionSwitch except instead of keeping the player from falling through object on proper non-lethal collision with landing spot it awards the player with points
 collisionWinSwitch :: (RealFloat a) => Player -> [Living] -> Scene -> V2 a -> SF InputState (Player, [Living])
@@ -205,6 +196,7 @@ update origGameState = proc events -> do
 
 screenSize :: (RealFloat a) => V2 a
 screenSize = V2 2560 1440
+
 -- screenSize = V2 1280 720
 
 render :: S.Renderer -> Resources -> (GameState, Bool) -> IO Bool
@@ -212,7 +204,6 @@ render renderer (Resources font sprite sprite2 scene sceneDangerous) (game@(Game
   do
     S.rendererDrawColor renderer S.$= S.V4 0 0 100 255
     S.clear renderer
-
     let renderDebug = \pos -> renderSpr renderer sprite2 pos (V2 50 50) 0
     let renderDebug2 = \pos -> renderSpr renderer sprite pos (V2 50 50) 0
     -- render the ACTUAL position of the player
@@ -262,11 +253,9 @@ render renderer (Resources font sprite sprite2 scene sceneDangerous) (game@(Game
           (fmap (^. lTerrain) landingSpots)
       )
     sequence $ (join . join) $ (fmap . fmap . fmap) renderDebug (fmap (^. (lTerrain . coll)) landingSpots)
-
     fontSurface <- F.solid font (V4 255 255 255 255) (pack ("score: " ++ (show score)))
     font <- S.createTextureFromSurface renderer fontSurface
     S.copy renderer font Nothing (Just (S.Rectangle (S.P (V2 100 100)) (V2 100 100)))
-
     S.present renderer
     return exit
   where
@@ -324,12 +313,9 @@ main = do
   spritetest2 <- myLoad renderer spritePath2
   sceneImg <- myLoad renderer scenePath
   sceneDangerousImg <- myLoad renderer sceneDangerousPath
-
-
   -- Fonts
   F.initialize
   font <- F.load fontPath 12
-
   let resources = Resources font spritetest spritetest2 sceneImg sceneDangerousImg
   lastInteraction <- newMVar =<< S.time
   let senseInput _canBlock = do
