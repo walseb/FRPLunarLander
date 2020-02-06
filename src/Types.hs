@@ -5,8 +5,6 @@ module Types where
 import Collision.GJKInternal.Support
 import Control.Lens
 import Linear
-import qualified Sprite as SP
-import YampaUtils.Types ()
 import SDL.Font (Font)
 import SDL as S
 

@@ -7,9 +7,9 @@ import Control.Lens
 import FRP.Yampa
 import Linear
 import Physics
-import YampaUtils.Types ()
 import Types
 import qualified Debug.Trace as Tr
+import YampaUtils.Types ()
 
 thrustForce :: (RealFloat a) => a
 thrustForce = 3000
