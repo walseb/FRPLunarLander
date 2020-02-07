@@ -1,11 +1,11 @@
-module Collision.GJKInternal.Debug where
+module Collision.Internal.GJKInternal.Debug where
 
-import Collision.GJKInternal.Util
-import Collision.GJKInternal.Support
+import Collision.Types
+import Collision.Util
+import Collision.Internal.GJKInternal.Support
 import Control.Lens
 import Foreign.C.Types
 import Linear
-import qualified Sprite as SP
 import Types
 import Control.Monad
 import qualified Debug.Trace as Tr

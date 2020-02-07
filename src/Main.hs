@@ -13,15 +13,16 @@ import Control.Lens
 import Data.Maybe
 import Data.String (fromString)
 import FRP.Yampa
-import Input
+import Input.Types as I
+import Input.Input
 import Linear
 import qualified SDL as S
 import qualified SDL.Font as F
 import SDL.Image as SI
 import Types
-import Render.Render
-import Collision.GJKInternal.Util (ptsApplyObject)
-import Player
+import Render.SDL.Render
+import Collision.Util (ptsApplyObject)
+import Actors.Player
 import Level
 
 -- accumHoldBy
@@ -35,7 +36,7 @@ applyInputs :: GameState -> SF InputState GameState
 applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer iEnemies) scene)) =
   proc input -> do
     (player, enemy) <- (collisionWinSwitch iPlayer iEnemies scene' 0) -< input
-    zoomLevel <- accumHoldBy zoomLevel iZoom -< Event (input ^. Input.zoom)
+    zoomLevel <- accumHoldBy zoomLevel iZoom -< Event (input ^. I.zoom)
     returnA -<
       ( GameState
           (CameraState zoomLevel)
@@ -59,7 +60,7 @@ update origGameState = proc events -> do
   gameState <- applyInputs origGameState -< newInputState
   returnA -<
     ( gameState,
-      fromJust (newInputState ^. Input.quit ^? pressed)
+      fromJust (newInputState ^. I.quit ^? pressed)
     )
 
 getResources renderer =

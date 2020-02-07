@@ -1,7 +1,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-module Render.Primitives where
+module Render.SDL.Primitives where
 
 import Control.Monad.IO.Class
 import Foreign.C.Types
@@ -28,14 +28,12 @@ import Control.Applicative
 -- sourceRect is the source rectangle to copy, or 'Nothing' for the whole texture
 -- destRect is the destination rectangle to copy to, or 'Nothing' for the whole rendering target. The texture will be stretched to fill the given rectangle.
 copyEx' :: MonadIO m => Renderer -> Texture -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
-copyEx' rend spr pos sourceRect destRect theta =
+copyEx' rend spr pos sourceRect destRect =
   copyEx
     rend
     spr
     sourceRect
     (Just (Rectangle (P pos) destRect))
-    -- This renders the rotation in the wrong way
-    theta
 {-# INLINE copyEx' #-}
 
 -- Render ex except with distortions based on zoom level and whatever

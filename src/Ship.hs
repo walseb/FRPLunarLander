@@ -2,13 +2,12 @@
 
 module Ship where
 
-import Collision.GJKInternal.Util (moveAlongAxis, degToRad)
+import Collision.Util (moveAlongAxis, degToRad)
 import Control.Lens
 import FRP.Yampa
 import Linear
 import Physics
 import Types
-import qualified Debug.Trace as Tr
 import YampaUtils.Types ()
 
 thrustForce :: (RealFloat a) => a

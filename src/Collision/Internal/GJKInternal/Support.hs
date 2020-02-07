@@ -1,11 +1,10 @@
-module Collision.GJKInternal.Support where
+module Collision.Internal.GJKInternal.Support where
 
 import Data.Maybe (fromMaybe)
 import GJK.Collision
 import GJK.Point (Pt)
 import Linear (V2 (..), dot)
-
-type Pt' a = V2 a
+import Collision.Types
 
 -- TODO: As you see here I'm redefining this to use V2 but GJK really wants stuff to be in the format (Double, Double) so It's kinda awkward
 polySupport' :: (RealFloat a) => [Pt' a] -> Pt -> Maybe Pt

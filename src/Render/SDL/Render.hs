@@ -1,6 +1,6 @@
-module Render.Render where
+module Render.SDL.Render where
 
-import Collision.GJKInternal.Util (toPt)
+import Collision.Util (toPt)
 import Control.Lens
 import Control.Monad
 import Data.Coerce
@@ -10,7 +10,7 @@ import Linear
 import qualified SDL as S
 import qualified SDL.Font as F
 import qualified SDL.Vect as SV
-import Render.Primitives (renderEx')
+import Render.SDL.Primitives (renderEx')
 import Types
 
 render :: S.Renderer -> Resources -> (GameState, Bool) -> IO Bool

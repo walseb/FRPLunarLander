@@ -1,29 +1,29 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Collision.GJKInternal.Util where
+module Collision.Util (moveAlongAxis, toPt, ptsApplyObject, degToRad) where
 
-import Collision.GJKInternal.Support
 import Control.Lens
 import Linear
 import Types
+import Collision.Types
 
 ptsApplyObject :: Terrain -> Terrain
 ptsApplyObject (Terrain coll obj) =
    Terrain
       ((fmap . fmap) (ptsTransform obj) coll)
       obj
-
-ptsTransform :: (RealFloat a) => Object a -> V2 a -> V2 a
-ptsTransform (Object pos size rot) pt = rotateAroundAxis (degToRad rot) (pos + (size * pt)) pos
+  where
+    ptsTransform :: (RealFloat a) => Object a -> V2 a -> V2 a
+    ptsTransform (Object pos size rot) pt = rotateAroundAxis (degToRad rot) (pos + (size * pt)) pos
 
 -- Takes rad as rot
 rotateAroundAxis :: (RealFloat a) => a -> V2 a -> V2 a -> V2 a
 rotateAroundAxis theta (V2 x y) (V2 xO yO) =
   V2 x' y'
   where
-    x' = xO + (x - xO) * cos (theta) - (y - yO) * sin (theta)
-    y' = yO + (x - xO) * sin (theta) + (y - yO) * cos (theta)
+    x' = xO + (x - xO) * cos theta - (y - yO) * sin theta
+    y' = yO + (x - xO) * sin theta + (y - yO) * cos theta
 
 toPt :: (RealFloat a) => (Object a) -> [Pt' a]
 -- toPt pos size rot =
@@ -40,11 +40,6 @@ toPt obj =
     topLeft = (pos' - midRightLocal) - midBotLocal
     botLeft = (pos' - midRightLocal) + midBotLocal
     botRight = pos' + midRightLocal + midBotLocal
-
-negateYAxis :: (RealFloat a) => V2 a -> V2 a
-negateYAxis = _y `over` negate
-
--- negateYAxis = id
 
 degToRad :: (Floating a) => a -> a
 degToRad theta = theta / 180 * pi

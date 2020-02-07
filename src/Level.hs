@@ -2,7 +2,12 @@ module Level where
 
 import Linear
 import Types
-import Render.Render
+
+import Control.Lens
+
+-- Reason why we need to do this is because the software uses top left as begin
+negateYAxis :: (Num a) => V2 a -> V2 a
+negateYAxis = _y `over` negate
 
 initialGame =
   GameState

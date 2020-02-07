@@ -1,6 +1,6 @@
 {-# LANGUAGE Arrows #-}
 
-module Enemy where
+module Actors.Enemy (enemyBehavior) where
 
 import Linear
 import FRP.Yampa
