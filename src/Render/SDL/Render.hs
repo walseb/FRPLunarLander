@@ -10,11 +10,11 @@ import Linear
 import qualified SDL as S
 import qualified SDL.Font as F
 import qualified SDL.Vect as SV
-import Render.SDL.Primitives (renderEx')
+import Render.SDL.Primitives
 import Types
 
 render :: S.Renderer -> Resources -> (GameState, Bool) -> IO Bool
-render renderer (Resources font sprite sprite2 scene sceneDangerous) (game@(GameState (CameraState zoomLevel) (PhysicalState (MovingState (Player player score) objects) (Scene terrain landingSpots))), exit) =
+render renderer (Resources font sprite sprite2 scene sceneDangerous land1 land2 land3 land4 terr1 terr2 terr3 terr4 terr5) (game@(GameState (CameraState zoomLevel) (PhysicalState (MovingState (Player player score) objects) (Scene terrain landingSpots))), exit) =
   do
     S.rendererDrawColor renderer S.$= S.V4 0 0 100 255
     S.clear renderer
@@ -41,6 +41,9 @@ render renderer (Resources font sprite sprite2 scene sceneDangerous) (game@(Game
       -- (V2 500 500)
       (fmap coerce (objects ^. (to head . lObject . size)))
       (coerce (objects ^. (to head . lObject . rot)))
+
+    S.rendererDrawColor renderer S.$= S.V4 255 0 0 255
+
     sequence
       ( fmap
           ( \terr ->
@@ -53,6 +56,7 @@ render renderer (Resources font sprite sprite2 scene sceneDangerous) (game@(Game
           )
           terrain
       )
+
     sequence $ (join . join) $ (fmap . fmap . fmap) renderDebug (fmap (^. coll) terrain)
     sequence
       ( fmap
@@ -77,7 +81,10 @@ render renderer (Resources font sprite sprite2 scene sceneDangerous) (game@(Game
     screenSize = V2 2560 1440
     -- screenSize = V2 1280 720
     screenMiddle = (screenSize / 2) * pure (fromIntegral zoomLevel)
+    deltaPos :: V2 Double
     deltaPos = screenMiddle - (negateYAxis (player ^. (lObject . pos)))
+    renderLine' :: (Integral a) => S.Renderer -> [[V2 a]] -> IO ()
+    renderLine' = (\rend pts -> renderLine rend (fmap floor deltaPos) (pure (fromIntegral zoomLevel)) ((fmap . fmap) (fmap fromIntegral) pts))
     copy =
       ( \rend center spr pos size theta ->
           renderEx'

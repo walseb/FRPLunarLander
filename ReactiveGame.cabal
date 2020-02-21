@@ -28,6 +28,10 @@ executable ReactiveGame
                 -- SDL TFF dependency
                 , text
 
+                -- SDL draw lines dependency
+                , vector
+
                 , bearriver
                 , template-haskell
                 , gjk
+                , aeson-tiled

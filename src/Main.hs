@@ -5,25 +5,27 @@ module Main
   )
 where
 
+import Control.Monad.IO.Class
+import Actors.Player
+import Collision.Util (ptsApplyObject)
 import Control.Concurrent
   ( newMVar,
     swapMVar,
   )
 import Control.Lens
+import qualified Data.Aeson.Tiled as Tiled
 import Data.Maybe
 import Data.String (fromString)
 import FRP.Yampa
-import Input.Types as I
 import Input.Input
+import Input.Types as I
+import Level
 import Linear
+import Render.SDL.Render
 import qualified SDL as S
 import qualified SDL.Font as F
 import SDL.Image as SI
 import Types
-import Render.SDL.Render
-import Collision.Util (ptsApplyObject)
-import Actors.Player
-import Level
 
 -- accumHoldBy
 zoomLevel :: Int -> KeyState -> Int
@@ -63,34 +65,43 @@ update origGameState = proc events -> do
       fromJust (newInputState ^. I.quit ^? pressed)
     )
 
+getResources :: (MonadIO m) => S.Renderer -> m Resources
 getResources renderer =
-  do
-    spritetest <- loadTexture renderer spritePath
-    spritetest2 <- loadTexture renderer spritePath2
-    sceneImg <- loadTexture renderer scenePath
-    sceneDangerousImg <- loadTexture renderer sceneDangerousPath
-    -- Init fonts
-    F.initialize
-    font <- F.load fontPath 12
-    pure $ Resources font spritetest spritetest2 sceneImg sceneDangerousImg
-      where
-        loadTexture ren fp = do
-          SI.loadTexture ren fp
+  -- Init fonts
+  Resources
+    <$> (F.initialize >> F.load fontPath 12)
+    <*> load spritePath renderer
+    <*> load spritePath2 renderer
+    <*> load scenePath renderer
+    <*> load sceneDangerousPath renderer
+    <*> load land1 renderer
+    <*> load land2 renderer
+    <*> (load land3 renderer)
+    <*> (load land4 renderer)
+    <*> (load terr1 renderer)
+    <*> (load terr2 renderer)
+    <*> (load terr3 renderer)
+    <*> (load terr4 renderer)
+    <*> (load terr5 renderer)
+  where
+    load :: (MonadIO m) => FilePath -> S.Renderer -> m S.Texture
+    load path rend = SI.loadTexture rend path
 
-        spritePath :: FilePath
-        spritePath = "data/testSprite.png"
+    spritePath = "data/testSprite.png"
+    spritePath2 = "data/testSprite2.png"
+    scenePath = "data/testTerrain.png"
+    sceneDangerousPath = "data/testTerrainDangerous.png"
+    fontPath = "data/fonts/OpenSans-Regular.ttf"
 
-        spritePath2 :: FilePath
-        spritePath2 = "data/testSprite2.png"
-
-        scenePath :: FilePath
-        scenePath = "data/testTerrain.png"
-
-        sceneDangerousPath :: FilePath
-        sceneDangerousPath = "data/testTerrainDangerous.png"
-
-        fontPath :: FilePath
-        fontPath = "data/fonts/OpenSans-Regular.ttf"
+    land1 = "data/maps/land1.png"
+    land2 = "data/maps/land2.png"
+    land3 = "data/maps/land3.png"
+    land4 = "data/maps/land4.png"
+    terr1 = "data/maps/terr1.png"
+    terr2 = "data/maps/terr2.png"
+    terr3 = "data/maps/terr3.png"
+    terr4 = "data/maps/terr4.png"
+    terr5 = "data/maps/terr5.png"
 
 getSenseInput =
   do
@@ -107,10 +118,8 @@ main = do
   S.initializeAll
   window <- S.createWindow (fromString "My SDL Application") (S.WindowConfig True False False S.Maximized S.NoGraphicsContext S.Wherever False (V2 800 600) True)
   renderer <- S.createRenderer window (-1) S.defaultRenderer
-
   resources <- getResources renderer
   senseInput <- getSenseInput
-
   reactimate (return NoEvent) senseInput (\_ -> render renderer resources) (update initialGame)
   S.destroyRenderer renderer
   S.destroyWindow window

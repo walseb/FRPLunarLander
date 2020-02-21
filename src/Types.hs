@@ -2,17 +2,56 @@
 
 module Types where
 
-import Control.Lens
-import Linear
-import SDL.Font (Font)
-import SDL as S
 import Collision.Types
+import Control.Lens
+import qualified Data.Aeson.Tiled as Tiled
+import Linear
+import SDL as S
+import SDL.Font (Font)
+
+data ResourcesSelect
+  = Sfont
+  | SobjectSprite
+  | SobjectSprite2
+  | SsceneSprite
+  | SsceneDangerousSprite
+  | Sland1
+  | Sland2
+  | Sland3
+  | Sland4
+  | Sterr1
+  | Sterr2
+  | Sterr3
+  | Sterr4
+  | Sterr5
+  deriving (Show)
+
+data Resources
+  = Resources
+      { _font :: Font,
+        _objectSprite :: S.Texture,
+        _objectSprite2 :: S.Texture,
+        _sceneSprite :: S.Texture,
+        _sceneDangerousSprite :: S.Texture,
+        land1 :: S.Texture,
+        land2 :: S.Texture,
+        land3 :: S.Texture,
+        land4 :: S.Texture,
+        terr1 :: S.Texture,
+        terr2 :: S.Texture,
+        terr3 :: S.Texture,
+        terr4 :: S.Texture,
+        terr5 :: S.Texture
+      }
+
+makeLenses ''Resources
 
 data Object a
   = Object
       { _pos :: V2 a,
         _size :: V2 a,
-        _rot :: a
+        _rot :: a,
+        _tex :: ResourcesSelect
       }
   deriving (Show)
 
@@ -35,18 +74,6 @@ data Living
   deriving (Show)
 
 makeLenses ''Living
-
-data Resources
-  = Resources
-      {
-        _font :: Font,
-        _objectSprite :: S.Texture,
-        _objectSprite2 :: S.Texture,
-        _sceneSprite :: S.Texture,
-        _sceneDangerousSprite :: S.Texture
-      }
-
-makeLenses ''Resources
 
 data LandingSpot
   = LandingSpot

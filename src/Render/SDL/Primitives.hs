@@ -1,13 +1,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-module Render.SDL.Primitives where
+module Render.SDL.Primitives (renderEx', renderLine) where
 
 import Control.Monad.IO.Class
 import Foreign.C.Types
 import SDL.Vect
 import SDL.Video.Renderer
 import Control.Applicative
+import Control.Monad
+import Data.Vector.Storable
 
 -- | Render the sprite at the given coordinates.
 -- render :: MonadIO m => Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> m ()
@@ -54,3 +56,13 @@ renderEx' rend deltaPos zoomLevel spr pos sourceRect destRect theta center =
                   Just (P c) -> Just $ P $ c `v2Div` zoomLevel
                   Nothing -> Nothing
 {-# INLINE renderEx' #-}
+
+
+renderLine :: (MonadIO m) => Renderer -> V2 CInt -> V2 CInt-> [[V2 CInt]] -> m ()
+renderLine rend deltaPos zoomLevel points =
+  drawLines rend points'
+    where
+      v2Div = liftA2 div
+      points' = fromList $
+            P <$>
+            (fmap (+ deltaPos `v2Div` zoomLevel) (join points))

@@ -7,5 +7,6 @@ pkgs.mkShell {
     pkgs.SDL2_image
     pkgs.SDL2_ttf
     pkgs.pkg-config
+    pkgs.tiled
   ];
 }
