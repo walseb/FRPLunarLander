@@ -205,7 +205,7 @@ initialGame =
                 -- -- NEW LANDING!!!
 
                 ( LandingSpot
-                    3
+                    1
                     ( Terrain
                     (convex
                         ( (fmap . fmap)
@@ -221,7 +221,7 @@ initialGame =
                 ),
 
                 ( LandingSpot
-                    3
+                    2
                     ( Terrain
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 256))
@@ -249,7 +249,7 @@ initialGame =
                 ),
 
                 ( LandingSpot
-                    3
+                    1
                     ( Terrain
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 479))
