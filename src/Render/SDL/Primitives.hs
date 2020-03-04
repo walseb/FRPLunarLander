@@ -1,7 +1,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-module Render.SDL.Primitives (renderEx', renderLine) where
+module Render.SDL.Primitives (renderEx, renderLine) where
 
 import Control.Monad.IO.Class
 import Foreign.C.Types
@@ -10,16 +10,6 @@ import SDL.Video.Renderer
 import Control.Applicative
 import Control.Monad
 import Data.Vector.Storable
-
--- | Render the sprite at the given coordinates.
--- render :: MonadIO m => Sprite -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> m ()
--- render spr pos sourceRect destRect =
---   copy
---     (spriteRenderer spr)
---     (spriteTexture spr)
---     sourceRect
---     (Just (Rectangle (P (-pos)) destRect))
--- {-# INLINE render #-}
 
 -- Render the sprite at the given coordinates.
 -- Here spr is the sprite to be rendered
@@ -40,8 +30,8 @@ copyEx' rend spr pos sourceRect destRect =
 
 -- Render ex except with distortions based on zoom level and whatever
 -- deltaPos is the distance between the player and the camera. This means the distance everything needs to be moved by to put the camera at the correct position
-renderEx' :: MonadIO m => Renderer -> V2 CInt -> V2 CInt -> Texture -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
-renderEx' rend deltaPos zoomLevel spr pos sourceRect destRect theta center =
+renderEx :: MonadIO m => Renderer -> V2 CInt -> V2 CInt -> Texture -> V2 CInt -> Maybe (Rectangle CInt) -> V2 CInt -> CDouble -> Maybe (Point V2 CInt) -> V2 Bool -> m ()
+renderEx rend deltaPos zoomLevel spr pos sourceRect destRect theta center =
   copyEx'
     rend
     spr
@@ -55,7 +45,7 @@ renderEx' rend deltaPos zoomLevel spr pos sourceRect destRect theta center =
       center' = case center of
                   Just (P c) -> Just $ P $ c `v2Div` zoomLevel
                   Nothing -> Nothing
-{-# INLINE renderEx' #-}
+{-# INLINE renderEx #-}
 
 
 renderLine :: (MonadIO m) => Renderer -> V2 CInt -> V2 CInt-> [[V2 CInt]] -> m ()

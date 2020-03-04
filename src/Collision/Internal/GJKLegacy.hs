@@ -31,7 +31,7 @@ collidesWrap (Scene terrain landingSpots) (MovingState player enemies) =
         False ->
           Nothing
   where
-    playerObj = [toPt (player ^. (pLiving . lObject))]
+    playerObj = [objToRect (player ^. (pLiving . lObject))]
     playerHitTerrain =
       collides'
         playerObj

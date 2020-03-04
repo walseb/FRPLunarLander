@@ -9,7 +9,7 @@ import Linear
 import SDL as S
 import SDL.Font (Font)
 
-data ResourcesSelect
+data SpriteSelect
   = Sfont
   | SobjectSprite
   | SobjectSprite2
@@ -33,25 +33,42 @@ data Resources
         _objectSprite2 :: S.Texture,
         _sceneSprite :: S.Texture,
         _sceneDangerousSprite :: S.Texture,
-        land1 :: S.Texture,
-        land2 :: S.Texture,
-        land3 :: S.Texture,
-        land4 :: S.Texture,
-        terr1 :: S.Texture,
-        terr2 :: S.Texture,
-        terr3 :: S.Texture,
-        terr4 :: S.Texture,
-        terr5 :: S.Texture
+        _land1 :: S.Texture,
+        _land2 :: S.Texture,
+        _land3 :: S.Texture,
+        _land4 :: S.Texture,
+        _terr1 :: S.Texture,
+        _terr2 :: S.Texture,
+        _terr3 :: S.Texture,
+        _terr4 :: S.Texture,
+        _terr5 :: S.Texture
       }
 
 makeLenses ''Resources
+
+getSprite :: SpriteSelect -> Resources -> S.Texture
+getSprite s =
+  case s of
+    SobjectSprite -> _objectSprite
+    SobjectSprite2 -> _objectSprite2
+    SsceneSprite -> _sceneSprite
+    SsceneDangerousSprite -> _sceneDangerousSprite
+    Sland1 -> _land1
+    Sland2 -> _land2
+    Sland3 -> _land3
+    Sland4 -> _land4
+    Sterr1 -> _terr1
+    Sterr2 -> _terr2
+    Sterr3 -> _terr3
+    Sterr4 -> _terr4
+    Sterr5 -> _terr5
 
 data Object a
   = Object
       { _pos :: V2 a,
         _size :: V2 a,
         _rot :: a,
-        _tex :: ResourcesSelect
+        _spr :: SpriteSelect
       }
   deriving (Show)
 
@@ -60,7 +77,7 @@ makeLenses ''Object
 data Terrain
   = Terrain
       { _coll :: [[Pt' Double]],
-        _tObject :: Object Double
+        _tObj :: Object Double
       }
   deriving (Show)
 
@@ -69,7 +86,7 @@ makeLenses ''Terrain
 data Living
   = Living
       { _alive :: Bool,
-        _lObject :: Object Double
+        _lObj :: Object Double
       }
   deriving (Show)
 

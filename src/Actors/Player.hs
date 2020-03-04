@@ -11,12 +11,13 @@ import Linear
 import Ship (shipControl)
 import Types
 import Collision.Types
+import qualified Debug.Trace as Tr
 
 livingMovementScore :: (RealFloat a) => Player -> V2 a -> [Living] -> Scene -> SF InputState ((Player, [Living]), Event (Maybe (Player, [Living], V2 a, Int)))
 livingMovementScore p@(Player (Living _ iPlayerObj) _) playerVelInit intiEnemies scene = proc input -> do
   (playerObj, playerVel, playerRot) <- shipControl iPlayerObj (fmap realToFrac playerVelInit) -< vectorizeMovement (input ^. movement)
-  enemy <- enemyBehavior (head intiEnemies ^. lObject) -< (V2 0 (-1))
-  let player' = (((pLiving . lObject) .~ playerObj) p)
+  enemy <- enemyBehavior (head intiEnemies ^. lObj) -< (V2 0 (-1))
+  let player' = (((pLiving . lObj) .~ playerObj) p)
   let playerCollision = collidesWrapScore scene (MovingState player' [(Living True enemy)])
   -- returnA -< (Living True playerObj, [(Living True enemy)])
   returnA -<
@@ -25,7 +26,7 @@ livingMovementScore p@(Player (Living _ iPlayerObj) _) playerVelInit intiEnemies
         NoHit -> NoEvent
         HitUnlandable -> Event Nothing
         (HitLandable score) ->
-          case (sum (abs playerVel) < 500) && (playerRot < 10) && (playerRot > -10) of
+          case (sum (abs playerVel) < 500) && ((playerRot < 10) || (playerRot > 350)) of
             True -> Event $ Just (player', [(Living True enemy)], fmap realToFrac playerVel, score)
             False -> Event Nothing
     )

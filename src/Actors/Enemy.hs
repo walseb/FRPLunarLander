@@ -19,4 +19,4 @@ enemyBehavior :: (RealFloat a) => Object a -> SF (V2 a) (Object a)
 enemyBehavior initObj = proc moveDir -> do
   -- TODO: this fromIntegral seems to convert the numbers into Integer which is inefficient
   a <- (enemyMovement (initObj ^. pos)) -< moveDir
-  returnA -< (Object a (initObj ^. size) (initObj ^. rot))
+  returnA -< pos .~ a $ initObj

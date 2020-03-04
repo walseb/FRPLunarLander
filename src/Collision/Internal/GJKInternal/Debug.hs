@@ -12,7 +12,7 @@ import qualified Debug.Trace as Tr
 
 debugRenderHitbox :: (RealFloat a) => (V2 a -> IO ()) -> Object a -> IO [()]
 debugRenderHitbox renderFunc obj =
-  sequence $ fmap renderFunc (toPt (obj ^. pos) (obj ^. size) (obj ^. rot))
+  sequence $ fmap renderFunc (objToRect (obj ^. pos) (obj ^. size) (obj ^. rot))
 
   -- let test = (toPt ((obj ^. pos) + ((obj ^. size) / 2)) (obj ^. size) (obj ^. rot))
   --     test2 = fmap (\a -> fmap realToFrac a) test

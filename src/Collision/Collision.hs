@@ -1,11 +1,12 @@
 module Collision.Collision where
 
+import Collision.Internal.GJK
+import Collision.Types
 import Collision.Util
 import Control.Lens
 import Control.Monad
+import Data.Foldable
 import Types
-import Collision.Types
-import Collision.Internal.GJK
 
 collidesScore :: (RealFloat a) => [[Pt' a]] -> ([[Pt' a]], Int) -> Maybe Int
 collidesScore pts (pts', score) =
@@ -25,20 +26,19 @@ collidesWrapScore (Scene terrain landingSpots) (MovingState player enemies) =
         Nothing ->
           NoHit
   where
-    playerObj = [toPt (player ^. (pLiving . lObject))]
+    playerObj = [objToRect (player ^. (pLiving . lObj))]
     playerHitTerrain =
       collides'
         playerObj
-        ( [((toPt (enemies ^. (to head . lObject))))]
-            ++ [((toPt (enemies ^. (to head . lObject))))]
+        ( [((objToRect (enemies ^. (to head . lObj))))]
+            ++ [((objToRect (enemies ^. (to head . lObj))))]
             ++ (join (fmap (^. coll) terrain))
         )
     playerHitLandingspot =
-      collidesScore
-        playerObj
-        ( head
-            ( zip
-                (fmap (^. (lTerrain . coll)) landingSpots)
-                (fmap (^. pointValue) landingSpots)
-            )
-        )
+      asum $
+        collidesScore
+          playerObj
+          <$> ( zip
+                  (fmap (^. (lTerrain . coll)) landingSpots)
+                  (fmap (^. pointValue) landingSpots)
+              )

@@ -25,7 +25,7 @@ shipControl initObj initVel = proc inputDir -> do
   rot <- shipRotationSwitch (realToFrac (initObj ^. rot)) -< realToFrac $ inputDir ^. _x
   -- TODO fix this conversion
   (pos, vel) <- shipMovement (initObj ^. pos) initVel -< (movement2, realToFrac rot)
-  returnA -< ((Object pos (initObj ^. size) (realToFrac rot)), vel, realToFrac rot)
+  returnA -< ((Object pos (initObj ^. size) (realToFrac rot) (initObj ^. spr)), vel, realToFrac rot)
 
 shipRotationSwitch :: Double -> SF Double Double
 shipRotationSwitch initRot = proc turn -> do
