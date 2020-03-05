@@ -14,10 +14,10 @@ import Collision.Types
 import qualified Debug.Trace as Tr
 
 livingMovementScore :: (RealFloat a) => Player -> V2 a -> [Living] -> Scene -> SF InputState ((Player, [Living]), Event (Maybe (Player, [Living], V2 a, Int)))
-livingMovementScore p@(Player (Living _ iPlayerObj) _) playerVelInit intiEnemies scene = proc input -> do
-  (playerObj, playerVel, playerRot) <- shipControl iPlayerObj (fmap realToFrac playerVelInit) -< vectorizeMovement (input ^. movement)
+livingMovementScore p@(Player (Living _ iPlayerObj) _ initFuel) playerVelInit intiEnemies scene = proc input -> do
+  (playerObj, playerVel, playerRot, playerFuel) <- shipControl (iPlayerObj) (fmap realToFrac playerVelInit) initFuel -< vectorizeMovement (input ^. movement)
   enemy <- enemyBehavior (head intiEnemies ^. lObj) -< (V2 0 (-1))
-  let player' = (((pLiving . lObj) .~ playerObj) p)
+  let player' = ((fuel .~ playerFuel) (((pLiving . lObj) .~ playerObj) p))
   let playerCollision = collidesWrapScore scene (MovingState player' [(Living True enemy)])
   -- returnA -< (Living True playerObj, [(Living True enemy)])
   returnA -<
@@ -56,9 +56,10 @@ collisionWinSwitch player enemies scene playerInitVel =
     (livingMovementScore player playerInitVel enemies scene)
     ( \d ->
         case d of
-          (Just (player', enemies', playerVel, score)) -> collisionWinSwitch (addScore player score) enemies scene playerInitVel
-          Nothing -> constant (player, enemies)
+          (Just (player', enemies', playerVel, score)) -> collisionWinSwitch (nextLevel player' score) enemies scene playerInitVel
+          Nothing -> constant ((((pLiving . alive) .~ False) player), enemies)
     )
   where
+    nextLevel = addScore . ((pLiving . lObj . pos) .~ (V2 100 100)) . (fuel %~ (+3))
     addScore :: Player -> Int -> Player
     addScore player' score' = (score `over` (+ score')) player'

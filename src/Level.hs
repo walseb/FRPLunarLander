@@ -27,7 +27,7 @@ initialGame =
     (CameraState 3)
     ( PhysicalState
         ( MovingState
-            (Player (Living True (Object (V2 3000 0) (V2 500 500) 0 SobjectSprite)) 0)
+            (Player (Living True (Object (V2 3000 0) (V2 500 500) 0 SobjectSprite)) 0 10)
             [(Living True (Object (V2 0 99999) (V2 500 500) 0 SobjectSprite))]
         )
         -- Here the points are relative to the object position. In game loop those gets turned into world position

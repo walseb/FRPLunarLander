@@ -13,19 +13,20 @@ import YampaUtils.Types ()
 thrustForce :: (RealFloat a) => a
 thrustForce = 3000
 
-shipMovement :: (RealFloat a) => V2 a -> V2 a -> SF (Bool, a) (V2 a, V2 a)
-shipMovement initPos initVelocity = proc (thrusterPressed, rot) -> do
-  vel <- integralFrom initVelocity -< objectGravity + (if thrusterPressed then moveAlongAxis (V2 0 0) thrustForce (degToRad rot) else 0)
+shipMovement :: (RealFloat a) => V2 a -> V2 a -> Double -> SF (Bool, a) (V2 a, V2 a, Double)
+shipMovement initPos initVelocity initFuel = proc (thrusterPressed, rot) -> do
+  fuel <- integralFrom ((realToFrac initFuel) :: Double) -< (if thrusterPressed then -1 else 0)
+  vel <- integralFrom initVelocity -< objectGravity + (if (thrusterPressed && fuel > 0) then moveAlongAxis (V2 0 0) thrustForce (degToRad rot) else 0)
   pos <- integralFrom initPos -< vel
-  returnA -< (pos, vel)
+  returnA -< (pos, vel, fuel)
 
-shipControl :: (RealFloat a) => Object a -> V2 a -> SF (V2 a) (Object a, V2 a, a)
-shipControl initObj initVel = proc inputDir -> do
+shipControl :: (RealFloat a) => Object a -> V2 a -> Double -> SF (V2 a) (Object a, V2 a, a, Double)
+shipControl initObj initVel initFuel = proc inputDir -> do
   let movement2 = (inputDir ^. _y) > 0
   rot <- shipRotationSwitch (realToFrac (initObj ^. rot)) -< realToFrac $ inputDir ^. _x
   -- TODO fix this conversion
-  (pos, vel) <- shipMovement (initObj ^. pos) initVel -< (movement2, realToFrac rot)
-  returnA -< ((Object pos (initObj ^. size) (realToFrac rot) (initObj ^. spr)), vel, realToFrac rot)
+  (pos, vel, fuel) <- shipMovement (initObj ^. pos) initVel initFuel -< (movement2, realToFrac rot)
+  returnA -< ((Object pos (initObj ^. size) (realToFrac rot) (initObj ^. spr)), vel, realToFrac rot, fuel)
 
 shipRotationSwitch :: Double -> SF Double Double
 shipRotationSwitch initRot = proc turn -> do

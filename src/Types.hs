@@ -113,7 +113,8 @@ makeLenses ''Scene
 data Player
   = Player
       { _pLiving :: Living,
-        _score :: Int
+        _score :: Int,
+        _fuel :: Double
       }
   deriving (Show)
 

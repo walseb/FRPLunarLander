@@ -27,7 +27,6 @@ import qualified SDL.Font as F
 import SDL.Image as SI
 import Types
 
--- accumHoldBy
 zoomLevel :: Int -> KeyState -> Int
 zoomLevel zoom (ButtonAxisState _ (V2 True _)) = zoom + 1
 zoomLevel zoom (ButtonAxisState _ (V2 _ True)) = if zoom - 1 > 0 then zoom -1 else zoom
@@ -37,7 +36,7 @@ zoomLevel zoom (ScrollState scrollDist) = if zoom - (fromIntegral scrollDist) > 
 applyInputs :: GameState -> SF InputState GameState
 applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer iEnemies) scene)) =
   proc input -> do
-    (player, enemy) <- (collisionWinSwitch iPlayer iEnemies scene' 0) -< input
+    (player, enemy) <- (collisionWinSwitch iPlayer iEnemies scene' (V2 5000 (-500))) -< input
     zoomLevel <- accumHoldBy zoomLevel iZoom -< Event (input ^. I.zoom)
     returnA -<
       ( GameState
@@ -87,7 +86,7 @@ getResources renderer =
     load :: (MonadIO m) => FilePath -> S.Renderer -> m S.Texture
     load path rend = SI.loadTexture rend path
 
-    spritePath = "data/testSprite.png"
+    spritePath = "data/player.png"
     spritePath2 = "data/testSprite2.png"
     scenePath = "data/testTerrain.png"
     sceneDangerousPath = "data/testTerrainDangerous.png"
