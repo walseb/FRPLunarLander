@@ -54,7 +54,7 @@ renderObj deltaPos res zoomLevel rend renderFromCenter obj =
 render :: S.Renderer -> Resources -> (GameState, Bool) -> IO Bool
 render renderer res@(Resources font debugSpr debugSpr2 scene sceneDangerous land1 land2 land3 land4 terr1 terr2 terr3 terr4 terr5) (game@(GameState (CameraState zoomLevel) (PhysicalState (MovingState (Player player score) enemies) (Scene terrain landingSpots))), exit) =
   do
-    S.rendererDrawColor renderer S.$= S.V4 0 0 100 255
+    S.rendererDrawColor renderer S.$= S.V4 0 0 0 255
     S.clear renderer
     -- render the ACTUAL position of the player
     -- sequence $ fmap renderPt (objToRect (player ^. lObj))
