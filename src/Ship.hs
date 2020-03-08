@@ -2,13 +2,13 @@
 
 module Ship where
 
-import Collision.Util (moveAlongAxis, degToRad)
+import FRPEngine.Collision.Util (moveAlongAxis, degToRad)
 import Control.Lens
 import FRP.Yampa
 import Linear
 import Physics
-import Types
 import YampaUtils.Types ()
+import FRPEngine.Types
 
 thrustForce :: (RealFloat a) => a
 thrustForce = 3000
@@ -20,7 +20,7 @@ shipMovement initPos initVelocity initFuel = proc (thrusterPressed, rot) -> do
   pos <- integralFrom initPos -< vel
   returnA -< (pos, vel, fuel)
 
-shipControl :: (RealFloat a) => Object a -> V2 a -> Double -> SF (V2 a) (Object a, V2 a, a, Double)
+shipControl :: (RealFloat a) => Object a w -> V2 a -> Double -> SF (V2 a) (Object a w, V2 a, a, Double)
 shipControl initObj initVel initFuel = proc inputDir -> do
   let movement2 = (inputDir ^. _y) > 0
   rot <- shipRotationSwitch (realToFrac (initObj ^. rot)) -< realToFrac $ inputDir ^. _x

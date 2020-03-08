@@ -1,23 +1,25 @@
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main
   ( main,
   )
 where
 
-import Control.Monad.IO.Class
 import Actors.Player
-import Collision.Util (ptsApplyObject)
+import Collision (ptsApplyObject)
 import Control.Concurrent
   ( newMVar,
     swapMVar,
   )
 import Control.Lens
-import qualified Data.Aeson.Tiled as Tiled
+import Control.Monad.IO.Class
 import Data.Maybe
 import Data.String (fromString)
 import FRP.Yampa
 import Input.Input
+import Input.Interpreter
 import Input.Types as I
 import Level
 import Linear
@@ -26,18 +28,15 @@ import qualified SDL as S
 import qualified SDL.Font as F
 import SDL.Image as SI
 import Types
+import FRPEngine.Types
 
-zoomLevel :: Int -> KeyState -> Int
-zoomLevel zoom (ButtonAxisState _ (V2 True _)) = zoom + 1
-zoomLevel zoom (ButtonAxisState _ (V2 _ True)) = if zoom - 1 > 0 then zoom -1 else zoom
-zoomLevel zoom (ButtonAxisState _ _) = zoom
-zoomLevel zoom (ScrollState scrollDist) = if zoom - (fromIntegral scrollDist) > 0 then zoom - (fromIntegral scrollDist) else zoom
+import Input.Input
 
 applyInputs :: GameState -> SF InputState GameState
 applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer iEnemies) scene)) =
   proc input -> do
     (player, enemy) <- (collisionWinSwitch iPlayer iEnemies scene' (V2 5000 (-500))) -< input
-    zoomLevel <- accumHoldBy zoomLevel iZoom -< Event (input ^. I.zoom)
+    zoomLevel <- accumHoldBy (accumLimit (V2 30 1)) iZoom -< Event (input ^. I.zoom)
     returnA -<
       ( GameState
           (CameraState zoomLevel)
@@ -52,7 +51,7 @@ applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer i
           )
       )
   where
-    applyObjectPosToSceneColl (Scene terr landing) = Scene (fmap ptsApplyObject terr) (fmap (lTerrain `over` ptsApplyObject) landing)
+    applyObjectPosToSceneColl (Scene terr landing) = Scene (fmap ptsApplyObject terr) (fmap (lCollObj `over` ptsApplyObject) landing)
     scene' = applyObjectPosToSceneColl scene
 
 update :: GameState -> SF (Event [S.Event]) (GameState, Bool)
@@ -85,13 +84,11 @@ getResources renderer =
   where
     load :: (MonadIO m) => FilePath -> S.Renderer -> m S.Texture
     load path rend = SI.loadTexture rend path
-
     spritePath = "data/player.png"
     spritePath2 = "data/testSprite2.png"
     scenePath = "data/testTerrain.png"
     sceneDangerousPath = "data/testTerrainDangerous.png"
     fontPath = "data/fonts/OpenSans-Regular.ttf"
-
     land1 = "data/maps/land1.png"
     land2 = "data/maps/land2.png"
     land3 = "data/maps/land3.png"
@@ -102,23 +99,33 @@ getResources renderer =
     terr4 = "data/maps/terr4.png"
     terr5 = "data/maps/terr5.png"
 
-getSenseInput =
-  do
-    lastInteraction <- newMVar =<< S.time
-    let senseInput _canBlock = do
-          currentTime <- S.time
-          dt <- (currentTime -) <$> swapMVar lastInteraction currentTime
-          events <- Event <$> S.pollEvents
-          return (dt, Just events)
-    pure senseInput
-
-main :: IO ()
-main = do
+initSDL :: IO (S.Renderer, S.Window)
+initSDL = do
   S.initializeAll
   window <- S.createWindow (fromString "My SDL Application") (S.WindowConfig True False False S.Maximized S.NoGraphicsContext S.Wherever False (V2 800 600) True)
   renderer <- S.createRenderer window (-1) S.defaultRenderer
-  resources <- getResources renderer
+  return (renderer, window)
+
+runSDL loadResources run = do
+  (renderer, window) <- initSDL
   senseInput <- getSenseInput
-  reactimate (return NoEvent) senseInput (\_ -> render renderer resources) (update initialGame)
+
+  resources <- loadResources renderer
+  _ <- run renderer senseInput resources
+
   S.destroyRenderer renderer
   S.destroyWindow window
+  where
+    getSenseInput = do
+      lastInteraction <- newMVar =<< S.time
+      let senseInput _canBlock = do
+            currentTime <- S.time
+            dt <- (currentTime -) <$> swapMVar lastInteraction currentTime
+            events <- Event <$> S.pollEvents
+            return (dt, Just events)
+      pure senseInput
+
+main =
+  runSDL
+    (\rend -> getResources rend)
+    (\renderer senseInput resources -> reactimate (return NoEvent) senseInput (\_ -> render renderer resources) (update initialGame))

@@ -2,16 +2,18 @@
 
 module Actors.Player (collisionWinSwitch) where
 
-import Collision.Collision
+import Collision
 import Control.Lens
 import Actors.Enemy (enemyBehavior)
 import FRP.Yampa
 import Input.Types
+import Input.Interpreter
 import Linear
 import Ship (shipControl)
 import Types
-import Collision.Types
+import FRPEngine.Collision.Types
 import qualified Debug.Trace as Tr
+import FRPEngine.Types
 
 livingMovementScore :: (RealFloat a) => Player -> V2 a -> [Living] -> Scene -> SF InputState ((Player, [Living]), Event (Maybe (Player, [Living], V2 a, Int)))
 livingMovementScore p@(Player (Living _ iPlayerObj) _ initFuel) playerVelInit intiEnemies scene = proc input -> do
@@ -31,24 +33,6 @@ livingMovementScore p@(Player (Living _ iPlayerObj) _ initFuel) playerVelInit in
             False -> Event Nothing
     )
 
-vectorizeMovement :: (RealFloat a) => DirectionalInput -> V2 a
-vectorizeMovement
-  ( DirectionalInput
-      (ButtonState _ a0)
-      (ButtonState _ a1)
-      (ButtonState _ a2)
-      (ButtonState _ a3)
-    ) =
-    V2
-      -- Horizontal
-      (boolToInt a2 - boolToInt a3)
-      -- Vertical
-      (boolToInt a1 - boolToInt a0)
-    where
-      boolToInt :: (RealFloat a) => Bool -> a
-      boolToInt a = if a then 0 else 1
-vectorizeMovement _ = error "Trying to vectorize unsupported input"
-
 -- Same as collisionSwitch except instead of keeping the player from falling through object on proper non-lethal collision with landing spot it awards the player with points
 collisionWinSwitch :: (RealFloat a) => Player -> [Living] -> Scene -> V2 a -> SF InputState (Player, [Living])
 collisionWinSwitch player enemies scene playerInitVel =
@@ -60,6 +44,6 @@ collisionWinSwitch player enemies scene playerInitVel =
           Nothing -> constant ((((pLiving . alive) .~ False) player), enemies)
     )
   where
-    nextLevel = addScore . ((pLiving . lObj . pos) .~ (V2 100 100)) . (fuel %~ (+3))
+    nextLevel = addScore . ((pLiving . lObj . pos) .~ (V2 100 100)) . (fuel %~ (+2))
     addScore :: Player -> Int -> Player
     addScore player' score' = (score `over` (+ score')) player'

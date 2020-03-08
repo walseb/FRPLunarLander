@@ -3,6 +3,7 @@ module Level where
 import Control.Lens
 import Linear
 import Types
+import FRPEngine.Types
 
 -- Reason why we need to do this is because SDL renders from top left
 negateYAxis :: (Num a) => V2 a -> V2 a
@@ -32,7 +33,7 @@ initialGame =
         )
         -- Here the points are relative to the object position. In game loop those gets turned into world position
         ( Scene
-            ( [ -- ( Terrain
+            ( [ -- ( CollObj
                 --     ( (fmap . fmap)
                 --         negateYAxis
                 --         [ [ (V2 0 0.36666666666666664),
@@ -54,12 +55,12 @@ initialGame =
                 --     )
                 --     (Object (V2 3000 10000) (V2 5000 5000) 0 SsceneDangerousSprite)
                 -- ),
-                -- (Terrain
+                -- (CollObj
                 --   [[(V2 0 0), (V2 900 0), (V2 900 900), (V2 0 900)]]
                 --   (Object (V2 0 0) (V2 1 1) 0))
 
                 -- NEW TERRAIN!!!
-                ( Terrain
+                ( CollObj
                     ( convex
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 989))
@@ -77,7 +78,7 @@ initialGame =
                     (Object (V2 (scaleSize 0) 0) (scaleSize (V2 989 3000)) 0 Sterr1)
                 ),
 
-                ( Terrain
+                ( CollObj
                     ( convex
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 2290))
@@ -104,7 +105,7 @@ initialGame =
                     (Object (V2 (scaleSize (989 + 324)) 0) (scaleSize (V2 2290 3000)) 0 Sterr2)
                 ),
 
-                ( Terrain
+                ( CollObj
                     ( convex
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 3373))
@@ -139,7 +140,7 @@ initialGame =
                     (Object (V2 (scaleSize (989 + 324 + 2290 + 256)) 0) (scaleSize (V2 3373 3000)) 0 Sterr3)
                 ),
 
-                ( Terrain
+                ( CollObj
                     ( convex
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 1023))
@@ -155,7 +156,7 @@ initialGame =
                     (Object (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157)) 0) (scaleSize (V2 1023 3000)) 0 Sterr4)
                 ),
 
-                ( Terrain
+                ( CollObj
                     ( convex
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 1109))
@@ -179,7 +180,7 @@ initialGame =
             -- Landing spots
             ( [ -- ( LandingSpot
                 --     3
-                --     ( Terrain
+                --     ( CollObj
                 --         ( (fmap . fmap)
                 --             negateYAxis
                 --             [ [ (V2 0 0.36666666666666664),
@@ -206,7 +207,7 @@ initialGame =
 
                 ( LandingSpot
                     1
-                    ( Terrain
+                    ( CollObj
                     (convex
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 324))
@@ -222,7 +223,7 @@ initialGame =
 
                 ( LandingSpot
                     2
-                    ( Terrain
+                    ( CollObj
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 256))
                             [ [ (V2 0 1588),
@@ -236,7 +237,7 @@ initialGame =
 
                 ( LandingSpot
                     3
-                    ( Terrain
+                    ( CollObj
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 157))
                             [ [ (V2 0 766),
@@ -250,7 +251,7 @@ initialGame =
 
                 ( LandingSpot
                     1
-                    ( Terrain
+                    ( CollObj
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 479))
                             [ [ (V2 0 1613),

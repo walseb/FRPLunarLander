@@ -40,8 +40,8 @@ makePrisms ''InputState
 keybinds =
   InputState
     { _zoom =
-        (ScrollState 0),
-      -- (ButtonAxisState (V2 KeycodeB KeycodeO) (V2 False False)),
+        -- (ScrollState 0),
+      (ButtonAxisState (V2 KeycodeB KeycodeO) (V2 False False)),
       _movement =
         DirectionalInput
           (ButtonState KeycodeM False)

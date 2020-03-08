@@ -2,12 +2,13 @@
 
 module Types where
 
-import Collision.Types
+import FRPEngine.Collision.Types
 import Control.Lens
 import qualified Data.Aeson.Tiled as Tiled
 import Linear
 import SDL as S
 import SDL.Font (Font)
+import FRPEngine.Types
 
 data SpriteSelect
   = Sfont
@@ -46,9 +47,9 @@ data Resources
 
 makeLenses ''Resources
 
-getSprite :: SpriteSelect -> Resources -> S.Texture
-getSprite s =
-  case s of
+getSprite :: Object a SpriteSelect -> Resources -> S.Texture
+getSprite obj =
+  case (obj ^. spr) of
     SobjectSprite -> _objectSprite
     SobjectSprite2 -> _objectSprite2
     SsceneSprite -> _sceneSprite
@@ -63,30 +64,10 @@ getSprite s =
     Sterr4 -> _terr4
     Sterr5 -> _terr5
 
-data Object a
-  = Object
-      { _pos :: V2 a,
-        _size :: V2 a,
-        _rot :: a,
-        _spr :: SpriteSelect
-      }
-  deriving (Show)
-
-makeLenses ''Object
-
-data Terrain
-  = Terrain
-      { _coll :: [[Pt' Double]],
-        _tObj :: Object Double
-      }
-  deriving (Show)
-
-makeLenses ''Terrain
-
 data Living
   = Living
       { _alive :: Bool,
-        _lObj :: Object Double
+        _lObj :: Object Double SpriteSelect
       }
   deriving (Show)
 
@@ -95,7 +76,7 @@ makeLenses ''Living
 data LandingSpot
   = LandingSpot
       { _pointValue :: Int,
-        _lTerrain :: Terrain
+        _lCollObj :: CollObj SpriteSelect
       }
   deriving (Show)
 
@@ -103,7 +84,7 @@ makeLenses ''LandingSpot
 
 data Scene
   = Scene
-      { _sTerrain :: [Terrain],
+      { _sCollObj :: [CollObj SpriteSelect],
         _landingSpots :: [LandingSpot]
       }
   deriving (Show)

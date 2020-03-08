@@ -1,12 +1,22 @@
-module Collision.Collision where
+module Collision where
 
-import Collision.Internal.GJK
-import Collision.Types
-import Collision.Util
 import Control.Lens
 import Control.Monad
 import Data.Foldable
 import Types
+import FRPEngine.Collision.Internal.GJK
+
+import Control.Lens
+import FRP.Yampa
+import Input.Types
+import Input.Interpreter
+import Linear
+import Ship (shipControl)
+import FRPEngine.Types
+import FRPEngine.Collision.Types
+import FRPEngine.Collision.Util
+
+import qualified Debug.Trace as Tr
 
 collidesScore :: (RealFloat a) => [[Pt' a]] -> ([[Pt' a]], Int) -> Maybe Int
 collidesScore pts (pts', score) =
@@ -39,6 +49,15 @@ collidesWrapScore (Scene terrain landingSpots) (MovingState player enemies) =
         collidesScore
           playerObj
           <$> ( zip
-                  (fmap (^. (lTerrain . coll)) landingSpots)
+                  (fmap (^. (lCollObj . coll)) landingSpots)
                   (fmap (^. pointValue) landingSpots)
               )
+
+ptsApplyObject :: CollObj SpriteSelect -> CollObj SpriteSelect
+ptsApplyObject (CollObj coll obj) =
+   CollObj
+      ((fmap . fmap) (ptsTransform obj) coll)
+      obj
+  where
+    ptsTransform :: (RealFloat a) => Object a w -> V2 a -> V2 a
+    ptsTransform (Object pos size rot _) pt = rotateAroundAxis (degToRad rot) (pos + (size * pt)) pos
