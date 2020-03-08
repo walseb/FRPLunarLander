@@ -2,10 +2,7 @@
 
 module Types where
 
-import FRPEngine.Collision.Types
 import Control.Lens
-import qualified Data.Aeson.Tiled as Tiled
-import Linear
 import SDL as S
 import SDL.Font (Font)
 import FRPEngine.Types

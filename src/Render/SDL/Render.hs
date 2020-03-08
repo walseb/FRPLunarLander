@@ -1,18 +1,11 @@
 module Render.SDL.Render where
 
-import FRPEngine.Collision.Util (objToRect)
 import Control.Applicative
 import Control.Lens
-import Control.Monad
-import Data.Text (pack)
 import Linear
 import FRPEngine.Render.SDL.Primitives
 import qualified SDL as S
-import qualified SDL.Font as F
-import qualified SDL.Vect as SV
 import FRPEngine.Types
-import SDL
-import qualified Debug.Trace as Tr
 import Types
 
 screenSize :: (Integral a) => V2 a

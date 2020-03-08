@@ -4,7 +4,7 @@ module Actors.Enemy (enemyBehavior) where
 
 import Linear
 import FRP.Yampa
-import YampaUtils.Types ()
+import FRPEngine.YampaUtils.Types ()
 import Control.Lens
 import FRPEngine.Types
 

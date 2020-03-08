@@ -6,17 +6,10 @@ import Data.Foldable
 import Types
 import FRPEngine.Collision.Internal.GJK
 
-import Control.Lens
-import FRP.Yampa
-import Input.Types
-import Input.Interpreter
 import Linear
-import Ship (shipControl)
 import FRPEngine.Types
 import FRPEngine.Collision.Types
 import FRPEngine.Collision.Util
-
-import qualified Debug.Trace as Tr
 
 collidesScore :: (RealFloat a) => [[Pt' a]] -> ([[Pt' a]], Int) -> Maybe Int
 collidesScore pts (pts', score) =

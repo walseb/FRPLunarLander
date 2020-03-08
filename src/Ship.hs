@@ -7,7 +7,7 @@ import Control.Lens
 import FRP.Yampa
 import Linear
 import Physics
-import YampaUtils.Types ()
+import FRPEngine.YampaUtils.Types ()
 import FRPEngine.Types
 
 thrustForce :: (RealFloat a) => a

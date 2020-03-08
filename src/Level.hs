@@ -206,7 +206,7 @@ initialGame =
                 -- -- NEW LANDING!!!
 
                 ( LandingSpot
-                    1
+                    2
                     ( CollObj
                     (convex
                         ( (fmap . fmap)
@@ -222,7 +222,7 @@ initialGame =
                 ),
 
                 ( LandingSpot
-                    2
+                    1
                     ( CollObj
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 256))
@@ -250,7 +250,7 @@ initialGame =
                 ),
 
                 ( LandingSpot
-                    1
+                    2
                     ( CollObj
                         ( (fmap . fmap)
                             (negateYAxis . (scaleColl 479))

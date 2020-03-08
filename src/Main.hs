@@ -1,6 +1,4 @@
 {-# LANGUAGE Arrows #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE TupleSections #-}
 
 module Main
   ( main,
@@ -9,18 +7,12 @@ where
 
 import Actors.Player
 import Collision (ptsApplyObject)
-import Control.Concurrent
-  ( newMVar,
-    swapMVar,
-  )
 import Control.Lens
 import Control.Monad.IO.Class
 import Data.Maybe
-import Data.String (fromString)
 import FRP.Yampa
-import Input.Input
-import Input.Interpreter
-import Input.Types as I
+import FRPEngine.Input.Interpreter
+import FRPEngine.Input.Types as I
 import Level
 import Linear
 import Render.SDL.Render
@@ -28,9 +20,8 @@ import qualified SDL as S
 import qualified SDL.Font as F
 import SDL.Image as SI
 import Types
-import FRPEngine.Types
-
-import Input.Input
+import FRPEngine.Init
+import FRPEngine.Input.Input
 
 applyInputs :: GameState -> SF InputState GameState
 applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer iEnemies) scene)) =
@@ -98,32 +89,6 @@ getResources renderer =
     terr3 = "data/maps/terr3.png"
     terr4 = "data/maps/terr4.png"
     terr5 = "data/maps/terr5.png"
-
-initSDL :: IO (S.Renderer, S.Window)
-initSDL = do
-  S.initializeAll
-  window <- S.createWindow (fromString "My SDL Application") (S.WindowConfig True False False S.Maximized S.NoGraphicsContext S.Wherever False (V2 800 600) True)
-  renderer <- S.createRenderer window (-1) S.defaultRenderer
-  return (renderer, window)
-
-runSDL loadResources run = do
-  (renderer, window) <- initSDL
-  senseInput <- getSenseInput
-
-  resources <- loadResources renderer
-  _ <- run renderer senseInput resources
-
-  S.destroyRenderer renderer
-  S.destroyWindow window
-  where
-    getSenseInput = do
-      lastInteraction <- newMVar =<< S.time
-      let senseInput _canBlock = do
-            currentTime <- S.time
-            dt <- (currentTime -) <$> swapMVar lastInteraction currentTime
-            events <- Event <$> S.pollEvents
-            return (dt, Just events)
-      pure senseInput
 
 main =
   runSDL

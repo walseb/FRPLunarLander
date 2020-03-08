@@ -6,13 +6,12 @@ import Collision
 import Control.Lens
 import Actors.Enemy (enemyBehavior)
 import FRP.Yampa
-import Input.Types
-import Input.Interpreter
+import FRPEngine.Input.Types
+import FRPEngine.Input.Interpreter
 import Linear
 import Ship (shipControl)
 import Types
 import FRPEngine.Collision.Types
-import qualified Debug.Trace as Tr
 import FRPEngine.Types
 
 livingMovementScore :: (RealFloat a) => Player -> V2 a -> [Living] -> Scene -> SF InputState ((Player, [Living]), Event (Maybe (Player, [Living], V2 a, Int)))
