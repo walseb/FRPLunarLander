@@ -47,7 +47,7 @@ applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer i
 
 update :: GameState -> SF (Event [S.Event]) (GameState, Bool)
 update origGameState = proc events -> do
-  newInputState <- accumHoldBy inputStateUpdate keybinds -< events
+  newInputState <- accumHoldBy inputStateUpdate defaultKeybinds -< events
   gameState <- applyInputs origGameState -< newInputState
   returnA -<
     ( gameState,
@@ -59,6 +59,7 @@ getResources renderer =
   -- Init fonts
   Resources
     <$> (F.initialize >> F.load fontPath 12)
+    <*> load hiddenPath renderer
     <*> load spritePath renderer
     <*> load spritePath2 renderer
     <*> load scenePath renderer
@@ -75,6 +76,7 @@ getResources renderer =
   where
     load :: (MonadIO m) => FilePath -> S.Renderer -> m S.Texture
     load path rend = SI.loadTexture rend path
+    hiddenPath = "data/hidden.png"
     spritePath = "data/player.png"
     spritePath2 = "data/testSprite2.png"
     scenePath = "data/testTerrain.png"
@@ -92,5 +94,5 @@ getResources renderer =
 
 main =
   runSDL
-    (\rend -> getResources rend)
+    getResources
     (\renderer senseInput resources -> reactimate (return NoEvent) senseInput (\_ -> render renderer resources) (update initialGame))

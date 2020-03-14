@@ -173,6 +173,20 @@ initialGame =
                         )
                     )
                     (Object (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157 + 1023 + 479)) 0) (scaleSize (V2 1109 3000)) 0 Sterr5)
+                ),
+                ( CollObj
+                    ( convex
+                        ( (fmap . fmap)
+                            negateYAxis
+                            [ [ (V2 0 0),
+                                (V2 0 1),
+                                (V2 1 1),
+                                (V2 1 0)
+                              ]
+                            ]
+                        )
+                    )
+                    (Object (scaleSize (V2 (-10000) (-3000))) (scaleSize (V2 50000 3000)) 0 SHidden)
                 )
               ]
             )

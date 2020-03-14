@@ -14,7 +14,7 @@ screenSize :: (Integral a) => V2 a
 screenSize = V2 1280 720
 
 render :: S.Renderer -> Resources -> (GameState, Bool) -> IO Bool
-render renderer res@(Resources font debugSpr debugSpr2 scene sceneDangerous land1 land2 land3 land4 terr1 terr2 terr3 terr4 terr5) (game@(GameState (CameraState zoomLevel) (PhysicalState (MovingState (Player pObj score fuel) enemies) (Scene terrain landingSpots))), exit) =
+render renderer res@(Resources font _ _ _ _ _ _ _ _ _ _ _ _ _ _) (game@(GameState (CameraState zoomLevel) (PhysicalState (MovingState (Player pObj score fuel) enemies) (Scene terrain landingSpots))), exit) =
   do
     S.rendererDrawColor renderer S.$= S.V4 0 0 0 255
     S.clear renderer

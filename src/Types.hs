@@ -7,26 +7,10 @@ import SDL as S
 import SDL.Font (Font)
 import FRPEngine.Types
 
-data SpriteSelect
-  = Sfont
-  | SobjectSprite
-  | SobjectSprite2
-  | SsceneSprite
-  | SsceneDangerousSprite
-  | Sland1
-  | Sland2
-  | Sland3
-  | Sland4
-  | Sterr1
-  | Sterr2
-  | Sterr3
-  | Sterr4
-  | Sterr5
-  deriving (Show)
-
 data Resources
   = Resources
       { _font :: Font,
+        _hidden :: S.Texture,
         _objectSprite :: S.Texture,
         _objectSprite2 :: S.Texture,
         _sceneSprite :: S.Texture,
@@ -44,9 +28,28 @@ data Resources
 
 makeLenses ''Resources
 
+data SpriteSelect
+  = Sfont
+  | SHidden
+  | SobjectSprite
+  | SobjectSprite2
+  | SsceneSprite
+  | SsceneDangerousSprite
+  | Sland1
+  | Sland2
+  | Sland3
+  | Sland4
+  | Sterr1
+  | Sterr2
+  | Sterr3
+  | Sterr4
+  | Sterr5
+  deriving (Show)
+
 getSprite :: Object a SpriteSelect -> Resources -> S.Texture
 getSprite obj =
   case (obj ^. spr) of
+    SHidden -> _hidden
     SobjectSprite -> _objectSprite
     SobjectSprite2 -> _objectSprite2
     SsceneSprite -> _sceneSprite
