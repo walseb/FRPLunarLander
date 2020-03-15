@@ -10,6 +10,14 @@ extra-source-files:
 
 executable FRPLunarLander
     main-is: Main.hs
+    other-modules: Actors.Enemy
+                   Actors.Player
+                   Collision
+                   Level
+                   Physics
+                   Render.SDL.Render
+                   Ship
+                   Types
 
     hs-source-dirs: src
     default-language: Haskell2010
