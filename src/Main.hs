@@ -6,7 +6,6 @@ module Main
 where
 
 import Actors.Player
-import Collision (ptsApplyObject)
 import Control.Lens
 import Control.Monad.IO.Class
 import Data.Maybe
@@ -22,11 +21,12 @@ import SDL.Image as SI
 import Types
 import FRPEngine.Init
 import FRPEngine.Input.Input
+import FRPEngine.Collision.Util (ptsApplyObject)
 
 applyInputs :: GameState -> SF InputState GameState
-applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer iEnemies) scene)) =
+applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer) scene)) =
   proc input -> do
-    (player, enemy) <- (collisionWinSwitch iPlayer iEnemies scene' (V2 5000 (-500))) -< input
+    (player) <- (collisionWinSwitch iPlayer scene' (V2 5000 (-500))) -< input
     zoomLevel <- accumHoldBy (accumLimit (V2 30 1)) iZoom -< Event (input ^. I.zoom)
     returnA -<
       ( GameState
@@ -35,8 +35,6 @@ applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer i
               ( MovingState
                   -- Player
                   player
-                  -- Enemies
-                  enemy
               )
               scene'
           )

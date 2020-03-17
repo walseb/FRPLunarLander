@@ -7,7 +7,8 @@ import FRPEngine.Types
 
 -- Reason why we need to do this is because SDL renders from top left
 negateYAxis :: (Num a) => V2 a -> V2 a
-negateYAxis = _y `over` negate
+negateYAxis =
+  _y `over` negate
 
 scaleColl :: (Integral a, Fractional b) => a -> V2 a -> V2 b
 scaleColl maxDim curr = curr' / maxDim'
@@ -29,7 +30,6 @@ initialGame =
     ( PhysicalState
         ( MovingState
             (Player (Living True (Object (V2 3000 0) (V2 500 500) 0 SobjectSprite)) 0 10)
-            [(Living True (Object (V2 0 99999) (V2 500 500) 0 SobjectSprite))]
         )
         -- Here the points are relative to the object position. In game loop those gets turned into world position
         ( Scene
@@ -231,7 +231,7 @@ initialGame =
                             ]
                         )
                     )
-                        (Object (V2 (scaleSize (989)) 0) (scaleSize (V2 324 3000)) 0 Sland1)
+                        (Object (V2 (scaleSize 989) 0) (scaleSize (V2 324 3000)) 0 Sland1)
                     )
                 ),
 

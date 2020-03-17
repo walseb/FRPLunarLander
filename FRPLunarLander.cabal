@@ -10,8 +10,7 @@ extra-source-files:
 
 executable FRPLunarLander
     main-is: Main.hs
-    other-modules: Actors.Enemy
-                   Actors.Player
+    other-modules: Actors.Player
                    Collision
                    Level
                    Physics

@@ -103,9 +103,7 @@ makeLenses ''Player
 
 data MovingState
   = MovingState
-      { _player :: Player,
-        _enemies :: [Living]
-      }
+      { _player :: Player }
   deriving (Show)
 
 makeLenses ''MovingState

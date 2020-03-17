@@ -18,7 +18,7 @@ collidesScore pts (pts', score) =
     False -> Nothing
 
 collidesWrapScore :: Scene -> MovingState -> PlayerCollided
-collidesWrapScore (Scene terrain landingSpots) (MovingState player enemies) =
+collidesWrapScore (Scene terrain landingSpots) (MovingState player) =
   case playerHitTerrain of
     True ->
       HitUnlandable
@@ -33,10 +33,7 @@ collidesWrapScore (Scene terrain landingSpots) (MovingState player enemies) =
     playerHitTerrain =
       collides'
         playerObj
-        ( [((objToRect (enemies ^. (to head . lObj))))]
-            ++ [((objToRect (enemies ^. (to head . lObj))))]
-            ++ (join (fmap (^. coll) terrain))
-        )
+        (join (fmap (^. coll) terrain))
     playerHitLandingspot =
       asum $
         collidesScore
@@ -45,12 +42,3 @@ collidesWrapScore (Scene terrain landingSpots) (MovingState player enemies) =
                   (fmap (^. (lCollObj . coll)) landingSpots)
                   (fmap (^. pointValue) landingSpots)
               )
-
-ptsApplyObject :: CollObj SpriteSelect -> CollObj SpriteSelect
-ptsApplyObject (CollObj coll obj) =
-   CollObj
-      ((fmap . fmap) (ptsTransform obj) coll)
-      obj
-  where
-    ptsTransform :: (RealFloat a) => Object a w -> V2 a -> V2 a
-    ptsTransform (Object pos size rot _) pt = rotateAroundAxis (degToRad rot) (pos + (size * pt)) pos
