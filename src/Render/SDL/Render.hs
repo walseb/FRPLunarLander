@@ -19,8 +19,8 @@ render renderer res (game@(GameState (CameraState zoomLevel) (PhysicalState (Mov
       False ->
         renderText' "Game Over" (S.Rectangle (S.P (V2 500 500)) (V2 1000 500))
 
-    sequence $ fmap renderTerr (fmap (^. tObj) terrain)
-    sequence $ fmap renderTerr (fmap (^. lCollObj . tObj) landingSpots)
+    sequence $ fmap renderTerr (fmap (^. obj) terrain)
+    sequence $ fmap renderTerr (fmap (^. lCollObj . obj) landingSpots)
 
     renderText' ("score: " ++ (show score)) (S.Rectangle (S.P (V2 100 100)) (V2 150 100))
     renderText' ("Fuel: " ++ (show (floor (if (fuel < 0) then 0 else fuel)))) (S.Rectangle (S.P (V2 100 200)) (V2 150 100))

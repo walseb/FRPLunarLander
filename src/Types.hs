@@ -76,7 +76,7 @@ makeLenses ''Living
 data LandingSpot
   = LandingSpot
       { _pointValue :: Int,
-        _lCollObj :: CollObj SpriteSelect
+        _lCollObj :: CollObj Double SpriteSelect
       }
   deriving (Show)
 
@@ -84,7 +84,7 @@ makeLenses ''LandingSpot
 
 data Scene
   = Scene
-      { _sCollObj :: [CollObj SpriteSelect],
+      { _sCollObj :: [CollObj Double SpriteSelect],
         _landingSpots :: [LandingSpot]
       }
   deriving (Show)
