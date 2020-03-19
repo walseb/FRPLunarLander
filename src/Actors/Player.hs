@@ -18,8 +18,8 @@ import Types
 
 livingMovementScore :: (RealFloat a) => Player -> V2 a -> Scene -> SF InputState ((Player), Event (Maybe (Player, V2 a, Int)))
 livingMovementScore p@(Player (Living _ iPlayerObj) _ initFuel) playerVelInit scene = proc input -> do
-  (playerObj, playerVel, playerRot, playerFuel) <- shipControl (iPlayerObj) (fmap realToFrac playerVelInit) initFuel -< vectorizeMovement (input ^. movement)
-  let player' = ((fuel .~ playerFuel) (((pLiving . lObj) .~ playerObj) p))
+  (playerObj, playerVel, playerRot, playerFuel) <- shipControl (iPlayerObj ^. obj) (fmap realToFrac playerVelInit) initFuel -< vectorizeMovement (input ^. movement)
+  let player' = ((fuel .~ playerFuel) (((pLiving . liCollObj . obj) .~ playerObj) p))
   let playerCollision = collidesWrapScore scene (MovingState player')
   returnA -<
     ( (player'),
@@ -46,7 +46,7 @@ collisionWinSwitch player scene playerInitVel =
     nextLevel =
       addScore
         -- Reset to original position
-        . ((pLiving . lObj . pos) .~ (player ^. (pLiving . lObj . pos)))
+        . ((pLiving . liCollObj . obj . pos) .~ (player ^. (pLiving . liCollObj . obj . pos)))
         -- Add fuel
         . (fuel %~ (+ 2))
     addScore :: Player -> Int -> Player

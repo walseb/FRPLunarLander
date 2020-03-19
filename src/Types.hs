@@ -46,7 +46,7 @@ data SpriteSelect
   | Sterr5
   deriving (Show)
 
-getSprite :: Object a SpriteSelect -> Resources -> S.Texture
+getSprite :: Obj a SpriteSelect -> Resources -> S.Texture
 getSprite obj =
   case (obj ^. spr) of
     SHidden -> _hidden
@@ -67,7 +67,7 @@ getSprite obj =
 data Living
   = Living
       { _alive :: Bool,
-        _lObj :: Object Double SpriteSelect
+        _liCollObj :: CollObj Double SpriteSelect
       }
   deriving (Show)
 

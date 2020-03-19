@@ -17,7 +17,7 @@ render renderer res (game@(GameState (CameraState zoomLevel) (PhysicalState (Mov
 
     case pObj ^. alive of
       True ->
-        renderSpr (pObj ^. lObj)
+        renderSpr (pObj ^. (liCollObj . obj))
       False ->
         renderText' "Game Over" (S.Rectangle (S.P (V2 500 500)) (V2 1000 500))
 
@@ -28,16 +28,18 @@ render renderer res (game@(GameState (CameraState zoomLevel) (PhysicalState (Mov
     renderText' ("Fuel: " ++ (show (floor (if (fuel < 0) then 0 else fuel)))) (S.Rectangle (S.P (V2 100 200)) (V2 150 100))
 
     -- Draw collision nodes
-    -- sequence $ (join . join) $ (fmap . fmap . fmap) renderPt (fmap (^. coll) terrain)
-    -- sequence $ (join . join) $ (fmap . fmap . fmap) renderPt (fmap (^. (lCollObj . coll)) landingSpots)
-    -- sequence $ fmap renderPt (objToRect (pObj ^. lObj))--
+    sequence $ (join . join) $ (fmap . fmap . fmap) renderPt (fmap (^. coll) terrain)
+    sequence $ (join . join) $ (fmap . fmap . fmap) renderPt (fmap (^. (lCollObj . coll)) landingSpots)
+    -- sequence $ fmap renderPt (objToRect (pObj ^. (liCollObj . obj)))
+    sequence $ join $ (fmap . fmap) renderPt (getCollisionPointsPos (pObj ^. liCollObj))
+
 
     S.present renderer
     return exit
   where
     -- Static stuff center rot at top left
-    renderObj' = renderObj (pObj ^. (lObj . pos)) (flip getSprite res) (fromIntegral zoomLevel) renderer
-    renderSpr = renderObj' True
-    renderTerr = renderObj' False
+    renderObj' = renderObj (pObj ^. (liCollObj . obj . pos)) (flip getSprite res) (fromIntegral zoomLevel) renderer
+    renderSpr = renderObj'
+    renderTerr = renderObj'
     renderText' = renderText renderer (res ^. font)
-    renderPt pos = renderObj' True (Object pos (V2 50 50) 0 SobjectSprite2)
+    renderPt pos = renderObj' (Obj pos (V2 50 50) 0 SobjectSprite2 True)

@@ -28,7 +28,7 @@ initialGame =
     (CameraState 3)
     ( PhysicalState
         ( MovingState
-            (Player (Living True (Object (scaleSize (V2 500 3000)) (V2 500 500) 0 SobjectSprite)) 0 10)
+            (Player (Living True (CollObj [[(V2 0 0), (V2 1 0), (V2 1 1), (V2 0 1)]] (Obj (scaleSize (V2 500 3000)) (V2 500 500) 0 SobjectSprite True))) 0 10)
         )
         -- Here the points are relative to the object position. In game loop those gets turned into world position
         ( Scene
@@ -52,11 +52,11 @@ initialGame =
                 --           ]
                 --         ]
                 --     )
-                --     (Object (V2 3000 10000) (V2 5000 5000) 0 SsceneDangerousSprite)
+                --     (Obj (V2 3000 10000) (V2 5000 5000) 0 SsceneDangerousSprite)
                 -- ),
                 -- (CollObj
                 --   [[(V2 0 0), (V2 900 0), (V2 900 900), (V2 0 900)]]
-                --   (Object (V2 0 0) (V2 1 1) 0))
+                --   (Obj (V2 0 0) (V2 1 1) 0))
 
                 -- NEW TERRAIN!!!
                 ( CollObj
@@ -74,7 +74,7 @@ initialGame =
                             ]
                         )
                     )
-                    (Object (V2 (scaleSize 0) 0) (scaleSize (V2 989 3000)) 0 Sterr1)
+                    (Obj (V2 (scaleSize 0) 0) (scaleSize (V2 989 3000)) 0 Sterr1 False)
                 ),
 
                 ( CollObj
@@ -101,7 +101,7 @@ initialGame =
                             ]
                         )
                     )
-                    (Object (V2 (scaleSize (989 + 324)) 0) (scaleSize (V2 2290 3000)) 0 Sterr2)
+                    (Obj (V2 (scaleSize (989 + 324)) 0) (scaleSize (V2 2290 3000)) 0 Sterr2 False)
                 ),
 
                 ( CollObj
@@ -136,7 +136,7 @@ initialGame =
                             ]
                         )
                     )
-                    (Object (V2 (scaleSize (989 + 324 + 2290 + 256)) 0) (scaleSize (V2 3373 3000)) 0 Sterr3)
+                    (Obj (V2 (scaleSize (989 + 324 + 2290 + 256)) 0) (scaleSize (V2 3373 3000)) 0 Sterr3 False)
                 ),
 
                 ( CollObj
@@ -152,7 +152,7 @@ initialGame =
                             ]
                         )
                     )
-                    (Object (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157)) 0) (scaleSize (V2 1023 3000)) 0 Sterr4)
+                    (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157)) 0) (scaleSize (V2 1023 3000)) 0 Sterr4 False)
                 ),
 
                 ( CollObj
@@ -171,7 +171,7 @@ initialGame =
                             ]
                         )
                     )
-                    (Object (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157 + 1023 + 479)) 0) (scaleSize (V2 1109 3000)) 0 Sterr5)
+                    (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157 + 1023 + 479)) 0) (scaleSize (V2 1109 3000)) 0 Sterr5 False)
                 ),
                 ( CollObj
                     ( convex
@@ -185,7 +185,7 @@ initialGame =
                             ]
                         )
                     )
-                    (Object (scaleSize (V2 (-10000) (-3000))) (scaleSize (V2 50000 3000)) 0 SHidden)
+                    (Obj (scaleSize (V2 (-10000) (-3000))) (scaleSize (V2 50000 3000)) 0 SHidden False)
                 )
               ]
             )
@@ -213,7 +213,7 @@ initialGame =
                 --               ]
                 --             ]
                 --         )
-                --         (Object (V2 (-2000) 10000) (V2 5000 5000) 0 SsceneSprite)
+                --         (Obj (V2 (-2000) 10000) (V2 5000 5000) 0 SsceneSprite)
                 --     )
                 -- ),
                 -- -- NEW LANDING!!!
@@ -230,7 +230,7 @@ initialGame =
                             ]
                         )
                     )
-                        (Object (V2 (scaleSize 989) 0) (scaleSize (V2 324 3000)) 0 Sland1)
+                        (Obj (V2 (scaleSize 989) 0) (scaleSize (V2 324 3000)) 0 Sland1 False)
                     )
                 ),
 
@@ -244,7 +244,7 @@ initialGame =
                               ]
                             ]
                         )
-                        (Object (V2 (scaleSize (989 + 324 + 2290)) 0) (scaleSize (V2 256 3000)) 0 Sland2)
+                        (Obj (V2 (scaleSize (989 + 324 + 2290)) 0) (scaleSize (V2 256 3000)) 0 Sland2 False)
                     )
                 ),
 
@@ -258,7 +258,7 @@ initialGame =
                               ]
                             ]
                         )
-                        (Object (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373)) 0) (scaleSize (V2 157 3000)) 0 Sland3)
+                        (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373)) 0) (scaleSize (V2 157 3000)) 0 Sland3 False)
                     )
                 ),
 
@@ -272,7 +272,7 @@ initialGame =
                               ]
                             ]
                         )
-                        (Object (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157 + 1023)) 0) (scaleSize (V2 479 3000)) 0 Sland4)
+                        (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157 + 1023)) 0) (scaleSize (V2 479 3000)) 0 Sland4 False)
                     )
                 )
               ]

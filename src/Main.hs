@@ -21,12 +21,11 @@ import SDL.Image as SI
 import Types
 import FRPEngine.Init
 import FRPEngine.Input.Input
-import FRPEngine.Collision.Util (ptsApplyObject)
 
 applyInputs :: GameState -> SF InputState GameState
 applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer) scene)) =
   proc input -> do
-    (player) <- (collisionWinSwitch iPlayer scene' (V2 5000 (-500))) -< input
+    player <- (collisionWinSwitch iPlayer scene (V2 5000 (-500))) -< input
     zoomLevel <- accumHoldBy (accumLimit (V2 30 1)) iZoom -< Event (input ^. I.zoom)
     returnA -<
       ( GameState
@@ -36,12 +35,9 @@ applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer) 
                   -- Player
                   player
               )
-              scene'
+              scene
           )
       )
-  where
-    applyObjectPosToSceneColl (Scene terr landing) = Scene (fmap ptsApplyObject terr) (fmap (lCollObj `over` ptsApplyObject) landing)
-    scene' = applyObjectPosToSceneColl scene
 
 update :: GameState -> SF (Event [S.Event]) (GameState, Bool)
 update origGameState = proc events -> do

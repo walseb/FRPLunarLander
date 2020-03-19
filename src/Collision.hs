@@ -29,16 +29,16 @@ collidesWrapScore (Scene terrain landingSpots) (MovingState player) =
         Nothing ->
           NoHit
   where
-    playerObj = [objToRect (player ^. (pLiving . lObj))]
+    playerObj = getCollisionPointsPos (player ^. (pLiving . liCollObj))
     playerHitTerrain =
       collides'
         playerObj
-        (join (fmap (^. coll) terrain))
+        (join (fmap getCollisionPointsPos terrain))
     playerHitLandingspot =
       asum $
         collidesScore
           playerObj
           <$> ( zip
-                  (fmap (^. (lCollObj . coll)) landingSpots)
+                  (fmap (getCollisionPointsPos . (^. lCollObj)) landingSpots)
                   (fmap (^. pointValue) landingSpots)
               )
