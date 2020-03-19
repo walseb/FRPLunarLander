@@ -5,10 +5,9 @@ import Linear
 import Types
 import FRPEngine.Types
 
--- Reason why we need to do this is because SDL renders from top left
+-- I'm inverting here because the program I used to measure the points used a top left model
 negateYAxis :: (Num a) => V2 a -> V2 a
-negateYAxis =
-  _y `over` negate
+negateYAxis = _y `over` ((-) 1)
 
 scaleColl :: (Integral a, Fractional b) => a -> V2 a -> V2 b
 scaleColl maxDim curr = curr' / maxDim'
@@ -29,7 +28,7 @@ initialGame =
     (CameraState 3)
     ( PhysicalState
         ( MovingState
-            (Player (Living True (Object (V2 3000 0) (V2 500 500) 0 SobjectSprite)) 0 10)
+            (Player (Living True (Object (scaleSize (V2 500 3000)) (V2 500 500) 0 SobjectSprite)) 0 10)
         )
         -- Here the points are relative to the object position. In game loop those gets turned into world position
         ( Scene

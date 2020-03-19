@@ -1,11 +1,13 @@
 module Render.SDL.Render where
 
+import Control.Monad
 import Control.Lens
 import Linear
 import FRPEngine.Render.SDL.Primitives
 import qualified SDL as S
 import FRPEngine.Types
 import Types
+import FRPEngine.Collision.Util
 
 render :: S.Renderer -> Resources -> (GameState, Bool) -> IO Bool
 render renderer res (game@(GameState (CameraState zoomLevel) (PhysicalState (MovingState (Player pObj score fuel)) (Scene terrain landingSpots))), exit) =
@@ -38,4 +40,4 @@ render renderer res (game@(GameState (CameraState zoomLevel) (PhysicalState (Mov
     renderSpr = renderObj' True
     renderTerr = renderObj' False
     renderText' = renderText renderer (res ^. font)
-    -- renderPt pos = renderObj' True (Object pos (V2 50 50) 0 SobjectSprite2)
+    renderPt pos = renderObj' True (Object pos (V2 50 50) 0 SobjectSprite2)

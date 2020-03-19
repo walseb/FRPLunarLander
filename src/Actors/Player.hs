@@ -1,17 +1,20 @@
 {-# LANGUAGE Arrows #-}
 
-module Actors.Player (collisionWinSwitch) where
+module Actors.Player
+  ( collisionWinSwitch,
+  )
+where
 
 import Collision
 import Control.Lens
 import FRP.Yampa
-import FRPEngine.Input.Types
+import FRPEngine.Collision.Types
 import FRPEngine.Input.Interpreter
+import FRPEngine.Input.Types
+import FRPEngine.Types
 import Linear
 import Ship (shipControl)
 import Types
-import FRPEngine.Collision.Types
-import FRPEngine.Types
 
 livingMovementScore :: (RealFloat a) => Player -> V2 a -> Scene -> SF InputState ((Player), Event (Maybe (Player, V2 a, Int)))
 livingMovementScore p@(Player (Living _ iPlayerObj) _ initFuel) playerVelInit scene = proc input -> do
@@ -40,6 +43,11 @@ collisionWinSwitch player scene playerInitVel =
           Nothing -> constant ((((pLiving . alive) .~ False) player))
     )
   where
-    nextLevel = addScore . ((pLiving . lObj . pos) .~ (V2 100 100)) . (fuel %~ (+2))
+    nextLevel =
+      addScore
+        -- Reset to original position
+        . ((pLiving . lObj . pos) .~ (player ^. (pLiving . lObj . pos)))
+        -- Add fuel
+        . (fuel %~ (+ 2))
     addScore :: Player -> Int -> Player
     addScore player' score' = (score `over` (+ score')) player'
