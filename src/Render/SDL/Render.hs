@@ -28,10 +28,10 @@ render renderer res (game@(GameState (CameraState zoomLevel) (PhysicalState (Mov
     renderText' ("Fuel: " ++ (show (floor (if (fuel < 0) then 0 else fuel)))) (S.Rectangle (S.P (V2 100 200)) (V2 150 100))
 
     -- Draw collision nodes
-    sequence $ (join . join) $ (fmap . fmap . fmap) renderPt (fmap (^. coll) terrain)
-    sequence $ (join . join) $ (fmap . fmap . fmap) renderPt (fmap (^. (lCollObj . coll)) landingSpots)
+    -- sequence $ (join . join) $ (fmap . fmap . fmap) renderPt (fmap (^. coll) terrain)
+    -- sequence $ (join . join) $ (fmap . fmap . fmap) renderPt (fmap (^. (lCollObj . coll)) landingSpots)
     -- sequence $ fmap renderPt (objToRect (pObj ^. (liCollObj . obj)))
-    sequence $ join $ (fmap . fmap) renderPt (getCollisionPointsPos (pObj ^. liCollObj))
+    -- sequence $ join $ (fmap . fmap) renderPt (getCollisionPointsPos (pObj ^. liCollObj))
 
 
     S.present renderer
