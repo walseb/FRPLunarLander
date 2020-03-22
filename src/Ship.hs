@@ -15,7 +15,7 @@ thrustForce = 3000
 
 shipMovement :: (RealFloat a) => V2 a -> V2 a -> Double -> SF (Bool, a) (V2 a, V2 a, Double)
 shipMovement initPos initVelocity initFuel = proc (thrusterPressed, rot) -> do
-  fuel <- integralFrom ((realToFrac initFuel) :: Double) -< (if thrusterPressed then -1 else 0)
+  fuel <- integralFrom initFuel -< (if thrusterPressed then -1 else 0)
   vel <- integralFrom initVelocity -< objectGravity + (if (thrusterPressed && fuel > 0) then moveAlongAxis (V2 0 0) thrustForce (degToRad rot) else 0)
   pos <- integralFrom initPos -< vel
   returnA -< (pos, vel, fuel)

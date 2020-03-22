@@ -4,7 +4,7 @@ import Control.Lens
 import Control.Monad
 import Data.Foldable
 import Types
-import FRPEngine.Collision.Internal.GJK
+import FRPEngine.Collision.GJK
 
 import Linear
 import FRPEngine.Types
