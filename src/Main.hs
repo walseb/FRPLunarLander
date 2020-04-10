@@ -92,4 +92,4 @@ main =
     S.Windowed
     "FRP Lunar Lander"
     getResources
-    (\renderer senseInput resources -> reactimate (return NoEvent) senseInput (\_ -> render renderer resources) (update initialGame))
+    (\renderer senseInput resources -> reactimate (pure NoEvent) senseInput (\_ -> render renderer resources) (update initialGame))

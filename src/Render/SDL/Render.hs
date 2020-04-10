@@ -35,7 +35,7 @@ render renderer res (game@(GameState (CameraState zoomLevel) (PhysicalState (Mov
 
 
     S.present renderer
-    return exit
+    pure exit
   where
     -- Static stuff center rot at top left
     renderObj' = renderObj (pObj ^. (liCollObj . obj . pos)) (flip getSprite res) (fromIntegral zoomLevel) renderer
