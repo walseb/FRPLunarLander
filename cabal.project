@@ -1,1 +1,1 @@
-packages: ../FRPEngine ./ ../dunai/examples/bearriver/
+packages: ../FRPEngine ./ ../../dunai/examples/bearriver/
