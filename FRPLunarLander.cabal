@@ -36,4 +36,4 @@ executable FRPLunarLander
 
                 , bearriver
                 , template-haskell
-                , FRPEngine
+                , FRPEngine == 0.1.*
