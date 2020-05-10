@@ -13,7 +13,6 @@ executable FRPLunarLander
     other-modules: Actors.Player
                    Collision
                    Level
-                   Physics
                    Render.SDL.Render
                    Ship
                    Types
@@ -36,4 +35,5 @@ executable FRPLunarLander
 
                 , bearriver
                 , template-haskell
-                , FRPEngine == 0.1.*
+                , FRPEngine == 0.2.*
+                , aeson

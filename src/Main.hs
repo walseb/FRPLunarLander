@@ -5,48 +5,65 @@ module Main
   )
 where
 
+import FRPEngine.Types
 import Actors.Player
+import Control.Concurrent.MVar
 import Control.Lens
 import Control.Monad.IO.Class
 import Data.Maybe
+import qualified Debug.Trace as Tr
 import FRP.Yampa
-import FRPEngine.Input.Interpreter
+import FRPEngine.Init
+import FRPEngine.Input.Input
 import FRPEngine.Input.Types as I
+import FRPEngine.Input.Utils
 import Level
 import Linear
 import Render.SDL.Render
 import qualified SDL as S
 import qualified SDL.Font as F
 import SDL.Image as SI
+import System.IO.Unsafe
 import Types
-import FRPEngine.Init
-import FRPEngine.Input.Input
 
-applyInputs :: GameState -> SF InputState GameState
-applyInputs (GameState (CameraState iZoom) (PhysicalState (MovingState iPlayer) scene)) =
+run :: (RealFloat a) => GameState a -> SF InputState (GameState a, Event (GameState a))
+run (GameState (CameraState iZoom) (PhysicalState iPlayer scene)) =
   proc input -> do
-    player <- (collisionWinSwitch iPlayer scene (V2 5000 (-500))) -< input
+    player <- (collisionWinSwitch iPlayer scene (iPlayer ^. (pCollObj . obj . vel))) -< input
     zoomLevel <- accumHoldBy (accumLimit (V2 30 1)) iZoom -< Event (input ^. I.zoom)
     returnA -<
-      ( GameState
-          (CameraState zoomLevel)
-          ( PhysicalState
-              ( MovingState
-                  -- Player
-                  player
-              )
-              scene
-          )
+      ( ( GameState
+            (CameraState zoomLevel)
+            ( PhysicalState
+                player
+                scene
+            )
+        ),
+        if (player ^. alive) then NoEvent else Event initialGame
       )
 
-update :: GameState -> SF (Event [S.Event]) (GameState, Bool)
-update origGameState = proc events -> do
+type UpdateLoop a = (GameState a -> MVar (GameState a) -> SF (Event [S.Event]) ((GameState a), Bool))
+
+update :: (RealFloat a) => UpdateLoop a
+update origGameState mvar = proc events -> do
   newInputState <- accumHoldBy inputStateUpdate defaultKeybinds -< events
-  gameState <- applyInputs origGameState -< newInputState
+  gameState <- runDeathResetSwitch origGameState -< newInputState
+  let quit = (fromJust (newInputState ^. I.quit ^? pressed))
+      quit' =
+        if quit
+          then-- UnsafePerformIO has to be used because the default reactimate doesn't allow there to be any self-defined return values on exit
+            seq (unsafePerformIO (putMVar mvar gameState)) True
+          else False
   returnA -<
     ( gameState,
-      fromJust (newInputState ^. I.quit ^? pressed)
+      quit'
     )
+  where
+    runDeathResetSwitch :: (RealFloat a) => GameState a -> SF InputState (GameState a)
+    runDeathResetSwitch game =
+      switch
+        (run game)
+        (Tr.trace "Dead" $ runDeathResetSwitch)
 
 getResources :: (MonadIO m) => S.Renderer -> m Resources
 getResources renderer =
@@ -86,10 +103,21 @@ getResources renderer =
     terr4 = "data/maps/terr4.png"
     terr5 = "data/maps/terr5.png"
 
-main =
+loadOldGameState :: (RealFloat a) => UpdateLoop a -> Maybe (GameState a) -> MVar (GameState a) -> SF (Event [S.Event]) (GameState a, Bool)
+loadOldGameState f Nothing =
+  f initialGame
+loadOldGameState f (Just origGameState) =
+  f origGameState
+
+main = do
+  myMVar <- newEmptyMVar
   runSDL
     True
     S.Windowed
     "FRP Lunar Lander"
     getResources
-    (\renderer senseInput resources -> reactimate (pure NoEvent) senseInput (\_ -> render renderer resources) (update initialGame))
+    ( \savedGameState renderer senseInput resources -> do
+        _ <- reactimate (pure NoEvent) senseInput (\_ -> render renderer resources) (loadOldGameState update (savedGameState :: Maybe (GameState Double)) myMVar)
+        mvar <- takeMVar myMVar
+        pure mvar
+    )

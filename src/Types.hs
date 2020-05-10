@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Types where
@@ -6,6 +7,8 @@ import Control.Lens
 import SDL as S
 import SDL.Font (Font)
 import FRPEngine.Types
+import Data.Aeson
+import GHC.Generics
 
 data Resources
   = Resources
@@ -44,7 +47,7 @@ data SpriteSelect
   | Sterr3
   | Sterr4
   | Sterr5
-  deriving (Show)
+  deriving (Generic, Show)
 
 getSprite :: Obj a SpriteSelect -> Resources -> S.Texture
 getSprite obj =
@@ -64,70 +67,77 @@ getSprite obj =
     Sterr4 -> _terr4
     Sterr5 -> _terr5
 
-data Living
-  = Living
-      { _alive :: Bool,
-        _liCollObj :: CollObj Double SpriteSelect
-      }
-  deriving (Show)
-
-makeLenses ''Living
-
-data LandingSpot
+data LandingSpot a
   = LandingSpot
       { _pointValue :: Int,
-        _lCollObj :: CollObj Double SpriteSelect
+        _lCollObj :: CollObj a SpriteSelect
       }
-  deriving (Show)
+  deriving (Generic, Show)
 
 makeLenses ''LandingSpot
 
-data Scene
+data Scene a
   = Scene
-      { _sCollObj :: [CollObj Double SpriteSelect],
-        _landingSpots :: [LandingSpot]
+      { _terrain :: [CollObj a SpriteSelect],
+        _landingSpots :: [LandingSpot a]
       }
-  deriving (Show)
+  deriving (Generic, Show)
 
 makeLenses ''Scene
 
-data Player
+data Player a
   = Player
-      { _pLiving :: Living,
+      { _alive :: Bool,
+        _pCollObj :: CollObj a SpriteSelect,
         _score :: Int,
-        _fuel :: Double
+        _fuel :: a
       }
-  deriving (Show)
+  deriving (Generic, Show)
 
 makeLenses ''Player
 
-data MovingState
-  = MovingState
-      { _player :: Player }
-  deriving (Show)
-
-makeLenses ''MovingState
-
-data PhysicalState
+data PhysicalState a
   = PhysicalState
-      { _movingState :: MovingState,
-        _scene :: Scene
+      {
+        _player :: Player a,
+        _scene :: Scene a
       }
-  deriving (Show)
+  deriving (Generic, Show)
 
 makeLenses ''PhysicalState
 
-data CameraState
+data CameraState a
   = CameraState
-      { _zoomLevel :: Int
+      { _zoomLevel :: a
       }
-  deriving (Show)
+  deriving (Generic, Show)
 
-data GameState
+data GameState a
   = GameState
-      { _cameraState :: CameraState,
-        _physicalState :: PhysicalState
+      { _cameraState :: CameraState a,
+        _physicalState :: PhysicalState a
       }
-  deriving (Show)
+  deriving (Generic, Show)
 
 makeLenses ''GameState
+
+instance (FromJSON a) => FromJSON (GameState a)
+instance (ToJSON a) => ToJSON (GameState a)
+
+instance (FromJSON a) => FromJSON (CameraState a)
+instance (ToJSON a) => ToJSON (CameraState a)
+
+instance (FromJSON a) => FromJSON (Player a)
+instance (ToJSON a) => ToJSON (Player a)
+
+instance (FromJSON a) => FromJSON (LandingSpot a)
+instance (ToJSON a) => ToJSON (LandingSpot a)
+
+instance (FromJSON a) => FromJSON (Scene a)
+instance (ToJSON a) => ToJSON (Scene a)
+
+instance (FromJSON a) => FromJSON (PhysicalState a)
+instance (ToJSON a) => ToJSON (PhysicalState a)
+
+instance ToJSON SpriteSelect
+instance FromJSON SpriteSelect

@@ -9,18 +9,18 @@ import Collision
 import Control.Lens
 import FRP.Yampa
 import FRPEngine.Collision.Types
-import FRPEngine.Input.Interpreter
+import FRPEngine.Input.Utils
 import FRPEngine.Input.Types
 import FRPEngine.Types
 import Linear
 import Ship (shipControl)
 import Types
 
-livingMovementScore :: (RealFloat a) => Player -> V2 a -> Scene -> SF InputState ((Player), Event (Maybe (Player, V2 a, Int)))
-livingMovementScore p@(Player (Living _ iPlayerObj) _ initFuel) playerVelInit scene = proc input -> do
+livingMovementScore :: (RealFloat a) => Player a -> V2 a -> Scene a -> SF InputState ((Player a), Event (Maybe (Player a, V2 a, Int)))
+livingMovementScore p@(Player _ iPlayerObj _ initFuel) playerVelInit scene = proc input -> do
   (playerObj, playerVel, playerRot, playerFuel) <- shipControl (iPlayerObj ^. obj) (fmap realToFrac playerVelInit) initFuel -< vectorizeMovement (input ^. movement)
-  let player' = ((fuel .~ playerFuel) (((pLiving . liCollObj . obj) .~ playerObj) p))
-  let playerCollision = collidesWrapScore scene (MovingState player')
+  let player' = ((fuel .~ playerFuel) (((pCollObj . obj) .~ playerObj) p))
+  let playerCollision = collidesWrapScore scene (player' ^. pCollObj)
   returnA -<
     ( (player'),
       case playerCollision of
@@ -32,22 +32,21 @@ livingMovementScore p@(Player (Living _ iPlayerObj) _ initFuel) playerVelInit sc
             False -> Event Nothing
     )
 
--- Same as collisionSwitch except instead of keeping the player from falling through object on proper non-lethal collision with landing spot it awards the player with points
-collisionWinSwitch :: (RealFloat a) => Player -> Scene -> V2 a -> SF InputState (Player)
+collisionWinSwitch :: (RealFloat a) => Player a -> Scene a -> V2 a -> SF InputState (Player a)
 collisionWinSwitch player scene playerInitVel =
   switch
     (livingMovementScore player playerInitVel scene)
     ( \d ->
         case d of
           (Just (player', playerVel, score)) -> collisionWinSwitch (nextLevel player' score) scene playerInitVel
-          Nothing -> constant ((((pLiving . alive) .~ False) player))
+          Nothing -> constant (((alive .~ False) player))
     )
   where
     nextLevel =
       addScore
         -- Reset to original position
-        . ((pLiving . liCollObj . obj . pos) .~ (player ^. (pLiving . liCollObj . obj . pos)))
+        . ((pCollObj . obj . pos) .~ (player ^. (pCollObj . obj . pos)))
         -- Add fuel
         . (fuel %~ (+ 2))
-    addScore :: Player -> Int -> Player
+    addScore :: (RealFloat a) =>  Player a -> Int -> Player a
     addScore player' score' = (score `over` (+ score')) player'

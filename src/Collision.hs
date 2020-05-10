@@ -6,7 +6,6 @@ import Data.Foldable
 import Types
 import FRPEngine.Collision.GJK
 
-import Linear
 import FRPEngine.Types
 import FRPEngine.Collision.Types
 import FRPEngine.Collision.Util
@@ -17,8 +16,8 @@ collidesScore pts (pts', score) =
     True -> Just score
     False -> Nothing
 
-collidesWrapScore :: Scene -> MovingState -> PlayerCollided
-collidesWrapScore (Scene terrain landingSpots) (MovingState player) =
+collidesWrapScore :: (RealFloat a) => Scene a -> CollObj a b -> PlayerCollided
+collidesWrapScore (Scene terrain landingSpots) player =
   case playerHitTerrain of
     True ->
       HitUnlandable
@@ -29,7 +28,7 @@ collidesWrapScore (Scene terrain landingSpots) (MovingState player) =
         Nothing ->
           NoHit
   where
-    playerObj = getCollisionPointsPos (player ^. (pLiving . liCollObj))
+    playerObj = getCollisionPointsPos player
     playerHitTerrain =
       collides'
         playerObj

@@ -1,68 +1,43 @@
 module Level where
 
 import Control.Lens
+import FRPEngine.Types
 import Linear
 import Types
-import FRPEngine.Types
 
 -- I'm inverting here because the program I used to measure the points used a top left model
-negateYAxis :: (Num a) => V2 a -> V2 a
+negateYAxis :: (RealFloat a) => V2 a -> V2 a
 negateYAxis = _y `over` ((-) 1)
 
-scaleColl :: (Integral a, Fractional b) => a -> V2 a -> V2 b
-scaleColl maxDim curr = curr' / maxDim'
+-- This turns absolute collision points into relative ones
+absCollPointsToRelative :: (RealFloat a) => a -> V2 a -> V2 a
+absCollPointsToRelative maxDim curr = curr' / maxDim'
   where
-    maxDim' = fmap fromIntegral (V2 maxDim 3000)
-    curr' = fmap fromIntegral curr
+    maxDim' = V2 maxDim 3000
+    curr' = curr
 
-convexGen :: (RealFloat a) => [[V2 a]] -> [V2 a] -> [[V2 a]]
-convexGen sum (x : rest@(x' : _)) = convexGen ([[x, x', V2 (x ^. _x) (-1)]] <> sum) rest
-convexGen sum (x : _) = sum
-
+-- Scale the sizes of everything, ugly hack because I think the positions aren't actually relative for terrain
 scaleSize x = x * 8
 
-convex = filter (not . null) . mconcat . fmap (convexGen [[]])
+-- Ugly hack to turn convex shapes into concave ones. This is done by
+convex :: (RealFloat a) => [[V2 a]] -> [[V2 a]]
+convex = filter (not . null) . mconcat . fmap (convex' [[]])
+  where
+    convex' sum (x : rest@(x' : _)) = convex' ([[x, x', V2 (x ^. _x) (-1)]] <> sum) rest
+    convex' sum (x : _) = sum
 
+initialGame :: (RealFloat a) => GameState a
 initialGame =
   GameState
     (CameraState 3)
     ( PhysicalState
-        ( MovingState
-            (Player (Living True (CollObj [[(V2 0 0), (V2 1 0), (V2 1 1), (V2 0 1)]] (Obj (scaleSize (V2 500 3000)) (V2 500 500) 0 SobjectSprite True))) 0 10)
-        )
-        -- Here the points are relative to the object position. In game loop those gets turned into world position
+        (Player True (CollObj [[(V2 0 0), (V2 1 0), (V2 1 1), (V2 0 1)]] (Obj (scaleSize (V2 500 3000)) (V2 5000 (-500)) 0 (V2 500 500) SobjectSprite True)) 0 10)
+        -- Here the collision points are relative to the object position. However since the program I used to get them returned absolute positions, I run them through scale coll to make them relative.
         ( Scene
-            ( [ -- ( CollObj
-                --     ( (fmap . fmap)
-                --         negateYAxis
-                --         [ [ (V2 0 0.36666666666666664),
-                --             (V2 0.3807291666666667 0.38055555555555554),
-                --             (V2 0.3807291666666667 1),
-                --             (V2 0 1)
-                --           ],
-                --           [ (V2 0.3807291666666667 0.7666666666666667),
-                --             (V2 0.7197916666666667 0.7666666666666667),
-                --             (V2 0.7229166666666667 1),
-                --             (V2 0.3807291666666667 1)
-                --           ],
-                --           [ (V2 0.7322916666666667 0.3435185185185185),
-                --             (V2 1 0.3675925925925926),
-                --             (V2 1 1),
-                --             (V2 0.7322916666666667 1)
-                --           ]
-                --         ]
-                --     )
-                --     (Obj (V2 3000 10000) (V2 5000 5000) 0 SsceneDangerousSprite)
-                -- ),
-                -- (CollObj
-                --   [[(V2 0 0), (V2 900 0), (V2 900 900), (V2 0 900)]]
-                --   (Obj (V2 0 0) (V2 1 1) 0))
-
-                -- NEW TERRAIN!!!
-                ( CollObj
+            ( [ ( CollObj
                     ( convex
                         ( (fmap . fmap)
-                            (negateYAxis . (scaleColl 989))
+                            (negateYAxis . (absCollPointsToRelative 989))
                             [ [ (V2 0 1896),
                                 (V2 162 1925),
                                 (V2 358 1998),
@@ -74,13 +49,12 @@ initialGame =
                             ]
                         )
                     )
-                    (Obj (V2 (scaleSize 0) 0) (scaleSize (V2 989 3000)) 0 Sterr1 False)
+                    (Obj (V2 (scaleSize 0) 0) 0 0 (scaleSize (V2 989 3000)) Sterr1 False)
                 ),
-
                 ( CollObj
                     ( convex
                         ( (fmap . fmap)
-                            (negateYAxis . (scaleColl 2290))
+                            (negateYAxis . (absCollPointsToRelative 2290))
                             [ [ (V2 0 2562),
                                 (V2 182 2549),
                                 (V2 433 2428),
@@ -101,13 +75,12 @@ initialGame =
                             ]
                         )
                     )
-                    (Obj (V2 (scaleSize (989 + 324)) 0) (scaleSize (V2 2290 3000)) 0 Sterr2 False)
+                    (Obj (V2 (scaleSize (989 + 324)) 0) 0 0 (scaleSize (V2 2290 3000)) Sterr2 False)
                 ),
-
                 ( CollObj
                     ( convex
                         ( (fmap . fmap)
-                            (negateYAxis . (scaleColl 3373))
+                            (negateYAxis . (absCollPointsToRelative 3373))
                             [ [ (V2 0 1587),
                                 (V2 83 1382),
                                 (V2 115 1165),
@@ -136,13 +109,12 @@ initialGame =
                             ]
                         )
                     )
-                    (Obj (V2 (scaleSize (989 + 324 + 2290 + 256)) 0) (scaleSize (V2 3373 3000)) 0 Sterr3 False)
+                    (Obj (V2 (scaleSize (989 + 324 + 2290 + 256)) 0) 0 0 (scaleSize (V2 3373 3000)) Sterr3 False)
                 ),
-
                 ( CollObj
                     ( convex
                         ( (fmap . fmap)
-                            (negateYAxis . (scaleColl 1023))
+                            (negateYAxis . (absCollPointsToRelative 1023))
                             [ [ (V2 0 767),
                                 (V2 226 1005),
                                 (V2 328 1274),
@@ -152,13 +124,12 @@ initialGame =
                             ]
                         )
                     )
-                    (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157)) 0) (scaleSize (V2 1023 3000)) 0 Sterr4 False)
+                    (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157)) 0) 0 0 (scaleSize (V2 1023 3000)) Sterr4 False)
                 ),
-
                 ( CollObj
                     ( convex
                         ( (fmap . fmap)
-                            (negateYAxis . (scaleColl 1109))
+                            (negateYAxis . (absCollPointsToRelative 1109))
                             [ [ (V2 0 1614),
                                 (V2 168 1770),
                                 (V2 346 1816),
@@ -171,7 +142,7 @@ initialGame =
                             ]
                         )
                     )
-                    (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157 + 1023 + 479)) 0) (scaleSize (V2 1109 3000)) 0 Sterr5 False)
+                    (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157 + 1023 + 479)) 0) 0 0 (scaleSize (V2 1109 3000)) Sterr5 False)
                 ),
                 ( CollObj
                     ( convex
@@ -185,94 +156,63 @@ initialGame =
                             ]
                         )
                     )
-                    (Obj (scaleSize (V2 (-10000) (-3000))) (scaleSize (V2 50000 3000)) 0 SHidden False)
+                    (Obj (scaleSize (V2 (-10000) (-3000))) 0 0 (scaleSize (V2 50000 3000)) SHidden False)
                 )
               ]
             )
-
             -- Landing spots
-            ( [ -- ( LandingSpot
-                --     3
-                --     ( CollObj
-                --         ( (fmap . fmap)
-                --             negateYAxis
-                --             [ [ (V2 0 0.36666666666666664),
-                --                 (V2 0.3807291666666667 0.38055555555555554),
-                --                 (V2 0.3807291666666667 1),
-                --                 (V2 0 1)
-                --               ],
-                --               [ (V2 0.3807291666666667 0.7666666666666667),
-                --                 (V2 0.7197916666666667 0.7666666666666667),
-                --                 (V2 0.7229166666666667 1),
-                --                 (V2 0.3807291666666667 1)
-                --               ],
-                --               [ (V2 0.7322916666666667 0.3435185185185185),
-                --                 (V2 1 0.3675925925925926),
-                --                 (V2 1 1),
-                --                 (V2 0.7322916666666667 1)
-                --               ]
-                --             ]
-                --         )
-                --         (Obj (V2 (-2000) 10000) (V2 5000 5000) 0 SsceneSprite)
-                --     )
-                -- ),
-                -- -- NEW LANDING!!!
-
-                ( LandingSpot
+            ( [ ( LandingSpot
                     2
                     ( CollObj
-                    (convex
-                        ( (fmap . fmap)
-                            (negateYAxis . (scaleColl 324))
-                            [ [ (V2 0 2571),
-                                (V2 324 2571)
-                              ]
-                            ]
+                        ( convex
+                            ( (fmap . fmap)
+                                (negateYAxis . (absCollPointsToRelative 324))
+                                [ [ (V2 0 2571),
+                                    (V2 324 2571)
+                                  ]
+                                ]
+                            )
                         )
-                    )
-                        (Obj (V2 (scaleSize 989) 0) (scaleSize (V2 324 3000)) 0 Sland1 False)
+                        (Obj (V2 (scaleSize 989) 0) 0 0 (scaleSize (V2 324 3000)) Sland1 False)
                     )
                 ),
-
                 ( LandingSpot
                     1
                     ( CollObj
                         ( (fmap . fmap)
-                            (negateYAxis . (scaleColl 256))
+                            (negateYAxis . (absCollPointsToRelative 256))
                             [ [ (V2 0 1588),
                                 (V2 256 1588)
                               ]
                             ]
                         )
-                        (Obj (V2 (scaleSize (989 + 324 + 2290)) 0) (scaleSize (V2 256 3000)) 0 Sland2 False)
+                        (Obj (V2 (scaleSize (989 + 324 + 2290)) 0) 0 0 (scaleSize (V2 256 3000)) Sland2 False)
                     )
                 ),
-
                 ( LandingSpot
                     3
                     ( CollObj
                         ( (fmap . fmap)
-                            (negateYAxis . (scaleColl 157))
+                            (negateYAxis . (absCollPointsToRelative 157))
                             [ [ (V2 0 766),
                                 (V2 157 766)
                               ]
                             ]
                         )
-                        (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373)) 0) (scaleSize (V2 157 3000)) 0 Sland3 False)
+                        (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373)) 0) 0 0 (scaleSize (V2 157 3000)) Sland3 False)
                     )
                 ),
-
                 ( LandingSpot
                     2
                     ( CollObj
                         ( (fmap . fmap)
-                            (negateYAxis . (scaleColl 479))
+                            (negateYAxis . (absCollPointsToRelative 479))
                             [ [ (V2 0 1613),
                                 (V2 479 1613)
                               ]
                             ]
                         )
-                        (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157 + 1023)) 0) (scaleSize (V2 479 3000)) 0 Sland4 False)
+                        (Obj (V2 (scaleSize (989 + 324 + 2290 + 256 + 3373 + 157 + 1023)) 0) 0 0 (scaleSize (V2 479 3000)) Sland4 False)
                     )
                 )
               ]
