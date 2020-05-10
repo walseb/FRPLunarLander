@@ -48,7 +48,8 @@ update :: (RealFloat a) => UpdateLoop a
 update origGameState mvar = proc events -> do
   newInputState <- accumHoldBy inputStateUpdate defaultKeybinds -< events
   gameState <- runDeathResetSwitch origGameState -< newInputState
-  let quit = (fromJust (newInputState ^. I.quit ^? pressed))
+  -- This is pretty ugly because if the key type changes, close needs to be changed to pressed for example or else you will get errors. Dependent types probably has a nice solution for this
+  let quit = (fromJust (newInputState ^. I.quit ^? close))
       quit' =
         if quit
           then-- UnsafePerformIO has to be used because the default reactimate doesn't allow there to be any self-defined return values on exit
