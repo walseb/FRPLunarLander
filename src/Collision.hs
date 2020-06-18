@@ -4,19 +4,19 @@ import Control.Lens
 import Control.Monad
 import Data.Foldable
 import Types
-import FRPEngine.Collision.GJK
+import FRPEngine.Physics.Collision.GJK
 
 import FRPEngine.Types
-import FRPEngine.Collision.Types
-import FRPEngine.Collision.Util
+import FRPEngine.Physics.Collision.Types
+import FRPEngine.Physics.Collision.Util
 
-collidesScore :: (RealFloat a) => [[Pt' a]] -> ([[Pt' a]], Int) -> Maybe Int
+collidesScore :: (Number a) => [[Pt' a]] -> ([[Pt' a]], Int) -> Maybe Int
 collidesScore pts (pts', score) =
   case collides' pts pts' of
     True -> Just score
     False -> Nothing
 
-collidesWrapScore :: (RealFloat a) => Scene a -> CollObj a b -> PlayerCollided
+collidesWrapScore :: (Number a) => Scene a -> CollObj a b -> PlayerCollided
 collidesWrapScore (Scene terrain landingSpots) player =
   case playerHitTerrain of
     True ->

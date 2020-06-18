@@ -25,12 +25,13 @@ import qualified SDL.Font as F
 import SDL.Image as SI
 import System.IO.Unsafe
 import Types
+import Input
 
-run :: (RealFloat a) => GameState a -> SF InputState (GameState a, Event (GameState a))
+run :: (Number a) => GameState a -> SF [Input] (GameState a, Event (GameState a))
 run (GameState (CameraState iZoom) (PhysicalState iPlayer scene)) =
   proc input -> do
     player <- (collisionWinSwitch iPlayer scene (iPlayer ^. (pCollObj . obj . vel))) -< input
-    zoomLevel <- accumHoldBy (accumLimit (V2 30 1)) iZoom -< Event (input ^. I.zoom)
+    zoomLevel <- accumHoldBy (accumLimit (V2 30 1)) iZoom -< Event $ scrollKey input
     returnA -<
       ( ( GameState
             (CameraState zoomLevel)
@@ -44,12 +45,11 @@ run (GameState (CameraState iZoom) (PhysicalState iPlayer scene)) =
 
 type UpdateLoop a = (GameState a -> MVar (GameState a) -> SF (Event [S.Event]) ((GameState a), Bool))
 
-update :: (RealFloat a) => UpdateLoop a
+update :: (Number a) => UpdateLoop a
 update origGameState mvar = proc events -> do
-  newInputState <- accumHoldBy inputStateUpdate defaultKeybinds -< events
+  newInputState <- accumHoldBy updateInput keyBinds -< events
   gameState <- runDeathResetSwitch origGameState -< newInputState
-  -- This is pretty ugly because if the key type changes, close needs to be changed to pressed for example or else you will get errors. Dependent types probably has a nice solution for this
-  let quit = (fromJust (newInputState ^. I.quit ^? close))
+  let quit = quitKey newInputState
       quit' =
         if quit
           then-- UnsafePerformIO has to be used because the default reactimate doesn't allow there to be any self-defined return values on exit
@@ -60,7 +60,7 @@ update origGameState mvar = proc events -> do
       quit'
     )
   where
-    runDeathResetSwitch :: (RealFloat a) => GameState a -> SF InputState (GameState a)
+    runDeathResetSwitch :: (Number a) => GameState a -> SF [Input] (GameState a)
     runDeathResetSwitch game =
       switch
         (run game)
@@ -104,7 +104,7 @@ getResources renderer =
     terr4 = "data/maps/terr4.png"
     terr5 = "data/maps/terr5.png"
 
-loadOldGameState :: (RealFloat a) => UpdateLoop a -> Maybe (GameState a) -> MVar (GameState a) -> SF (Event [S.Event]) (GameState a, Bool)
+loadOldGameState :: (Number a) => UpdateLoop a -> Maybe (GameState a) -> MVar (GameState a) -> SF (Event [S.Event]) (GameState a, Bool)
 loadOldGameState f Nothing =
   f initialGame
 loadOldGameState f (Just origGameState) =

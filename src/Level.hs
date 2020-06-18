@@ -6,11 +6,11 @@ import Linear
 import Types
 
 -- I'm inverting here because the program I used to measure the points used a top left model
-negateYAxis :: (RealFloat a) => V2 a -> V2 a
+negateYAxis :: (Number a) => V2 a -> V2 a
 negateYAxis = _y `over` ((-) 1)
 
 -- This turns absolute collision points into relative ones
-absCollPointsToRelative :: (RealFloat a) => a -> V2 a -> V2 a
+absCollPointsToRelative :: (Number a) => a -> V2 a -> V2 a
 absCollPointsToRelative maxDim curr = curr' / maxDim'
   where
     maxDim' = V2 maxDim 3000
@@ -20,13 +20,13 @@ absCollPointsToRelative maxDim curr = curr' / maxDim'
 scaleSize x = x * 8
 
 -- Ugly hack to turn convex shapes into concave ones. This is done by
-convex :: (RealFloat a) => [[V2 a]] -> [[V2 a]]
+convex :: (Number a) => [[V2 a]] -> [[V2 a]]
 convex = filter (not . null) . mconcat . fmap (convex' [[]])
   where
     convex' sum (x : rest@(x' : _)) = convex' ([[x, x', V2 (x ^. _x) (-1)]] <> sum) rest
     convex' sum (x : _) = sum
 
-initialGame :: (RealFloat a) => GameState a
+initialGame :: (Number a) => GameState a
 initialGame =
   GameState
     (CameraState 3)

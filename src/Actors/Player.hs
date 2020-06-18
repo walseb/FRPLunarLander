@@ -8,17 +8,18 @@ where
 import Collision
 import Control.Lens
 import FRP.Yampa
-import FRPEngine.Collision.Types
+import FRPEngine.Physics.Collision.Types
 import FRPEngine.Input.Utils
 import FRPEngine.Input.Types
 import FRPEngine.Types
 import Linear
 import Ship (shipControl)
 import Types
+import Input
 
-livingMovementScore :: (RealFloat a) => Player a -> V2 a -> Scene a -> SF InputState ((Player a), Event (Maybe (Player a, V2 a, Int)))
+livingMovementScore :: (Number a) => Player a -> V2 a -> Scene a -> SF [Input] ((Player a), Event (Maybe (Player a, V2 a, Int)))
 livingMovementScore p@(Player _ iPlayerObj _ initFuel) playerVelInit scene = proc input -> do
-  (playerObj, playerVel, playerRot, playerFuel) <- shipControl (iPlayerObj ^. obj) (fmap realToFrac playerVelInit) initFuel -< vectorizeMovement (input ^. movement)
+  (playerObj, playerVel, playerRot, playerFuel) <- shipControl (iPlayerObj ^. obj) (fmap realToFrac playerVelInit) initFuel -< moveKey input
   let player' = ((fuel .~ playerFuel) (((pCollObj . obj) .~ playerObj) p))
   let playerCollision = collidesWrapScore scene (player' ^. pCollObj)
   returnA -<
@@ -32,7 +33,7 @@ livingMovementScore p@(Player _ iPlayerObj _ initFuel) playerVelInit scene = pro
             False -> Event Nothing
     )
 
-collisionWinSwitch :: (RealFloat a) => Player a -> Scene a -> V2 a -> SF InputState (Player a)
+collisionWinSwitch :: (Number a) => Player a -> Scene a -> V2 a -> SF [Input] (Player a)
 collisionWinSwitch player scene playerInitVel =
   switch
     (livingMovementScore player playerInitVel scene)
@@ -48,5 +49,5 @@ collisionWinSwitch player scene playerInitVel =
         . ((pCollObj . obj . pos) .~ (player ^. (pCollObj . obj . pos)))
         -- Add fuel
         . (fuel %~ (+ 2))
-    addScore :: (RealFloat a) =>  Player a -> Int -> Player a
+    addScore :: (Number a) =>  Player a -> Int -> Player a
     addScore player' score' = (score `over` (+ score')) player'
